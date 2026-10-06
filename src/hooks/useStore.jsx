@@ -8,6 +8,7 @@ import * as days from '../services/dayService'
 import * as cheers from '../services/cheerService'
 import * as bets from '../services/betService'
 import * as categories from '../services/categoryService'
+import * as events from '../services/eventService'
 
 /* 전역 상태는 이 파일 하나에 모은다. 컴포넌트는 Supabase 를 직접 부르지 않는다.
    상태는 ref 하나에 두고 변경 후 bump() 로 다시 그린다 (원본 아티팩트 구조를 그대로 옮김).
@@ -19,7 +20,7 @@ export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {},
+  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {},
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -56,10 +57,34 @@ export function StoreProvider({ children }) {
     S.people = p
     S.me = p[uid] ? { ...structuredClone(p[uid]), routines: priv?.routines ?? p[uid].routines } : null
     S.catDetails = priv?.catDetails || {}
-    S.days = d; S.diary = di; S.ch = ch; S.baseCats = base; S.months = {}
+    S.days = d; S.diary = di; S.ch = ch; S.baseCats = base; S.months = {}; S.events = {}
+    syncBaseCats()
     await loadFriendDays()
     if (S.me && !S.view) await setView(uid)
     S.loaded = true; bump()
+  }
+  /** 기본 카테고리에서 추가한 내 카테고리는 이름·아이콘·색을 관리자가 정한 원본에 맞춘다 (관리자 수정이 모두에게 반영되게). */
+  function syncBaseCats() {
+    if (!S.me) return
+    let changed = false
+    for (const c of S.me.cats) {
+      const b = c.base && S.baseCats.find(x => x.id === c.base)
+      if (b && (c.name !== b.name || c.icon !== b.icon || c.color !== b.color)) {
+        Object.assign(c, { name: b.name, icon: b.icon, color: b.color }); changed = true
+      }
+    }
+    if (changed) saveMe()
+  }
+  /** 다른 사람·관리자가 바꾼 것만 가볍게 다시 받는다 (내 기록은 수정 중일 수 있어 건드리지 않음). */
+  async function softRefresh() {
+    if (S.local || !S.uid || !S.loaded) return
+    const [p, base, ch] = await Promise.all([profiles.listProfiles(), categories.listBaseCats(), bets.listBets()])
+    if (S.me && p[S.uid]) p[S.uid] = structuredClone(S.me)
+    S.people = p; S.baseCats = base; S.ch = ch
+    if (S.me && !p[S.uid]) { auth.signOut(); return }  // 관리자가 내 계정을 지운 경우
+    syncBaseCats()
+    await loadFriendDays()
+    bump()
   }
   async function loadFriendDays() {
     if (S.local || !S.me) return
@@ -75,13 +100,17 @@ export function StoreProvider({ children }) {
       const ok = session?.user?.email?.endsWith('@godsaeng.local')
       const uid = ok ? session.user.id : null
       if (uid === S.uid) { bump(); return }
-      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {} })
+      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {} })
       bump()
       if (uid) loadAll().catch(e => { S.loaded = true; onErr(e) })
     }
     auth.getSession().then(apply)
     const sub = auth.onAuth(apply)
-    return () => sub.unsubscribe()
+    // 창으로 돌아오면 + 1분마다: 관리자 변경(계정·기본 카테고리·이미지)과 친구 기록을 반영
+    const soft = () => { if (document.visibilityState === 'visible') softRefresh().catch(() => {}) }
+    document.addEventListener('visibilitychange', soft)
+    const iv = setInterval(soft, 60000)
+    return () => { sub.unsubscribe(); document.removeEventListener('visibilitychange', soft); clearInterval(iv) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -110,7 +139,7 @@ export function StoreProvider({ children }) {
 
   const act = {
     signIn: auth.signIn, register: auth.register, signOut: auth.signOut, toast,
-    refresh: () => { if (!S.local && S.uid) loadAll().catch(onErr) },
+    refresh: () => softRefresh().catch(onErr),
     myDay,
 
     join(nick, emoji) {
@@ -144,6 +173,7 @@ export function StoreProvider({ children }) {
     delCat(id) { S.me.cats = S.me.cats.filter(c => c.id !== id); delete S.catDetails[id]; saveMe(); bump() },
     catDetail: id => S.catDetails[id] || (S.catDetails[id] = { start: '', goal: '', todos: [] }),
     setCatDetail(id, patch) { Object.assign(act.catDetail(id), patch); saveMe(); bump() },
+    editCatTodo(id, tid, text) { const t = act.catDetail(id).todos.find(x => x.id === tid); if (t && text) { t.text = text; saveMe(); bump() } },
     addCatTodo(id, text) { act.catDetail(id).todos.push({ id: rid(), text, done: false }); saveMe(); bump() },
     toggleCatTodo(id, tid) { const t = act.catDetail(id).todos.find(x => x.id === tid); if (t) { t.done = !t.done; saveMe(); bump() } },
     delCatTodo(id, tid) { const d = act.catDetail(id); d.todos = d.todos.filter(x => x.id !== tid); saveMe(); bump() },
@@ -158,12 +188,26 @@ export function StoreProvider({ children }) {
     loadMonth(ym) {
       if (S.local || S.months[ym]) return
       S.months[ym] = true
-      const [y, m] = ym.split('-').map(Number), last = new Date(y, m, 0).getDate()
-      days.listMyDays(S.uid, ym + '-01', ym + '-' + String(last).padStart(2, '0')).then(got => {
+      const [y, m] = ym.split('-').map(Number), from = ym + '-01', to = ym + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0')
+      Promise.all([days.listMyDays(S.uid, from, to), events.listEvents(S.uid, from, to)]).then(([got, evs]) => {
         for (const k in got) if (!S.days[k]) S.days[k] = got[k]
+        evs.forEach(e => { S.events[e.id] = e })
         bump()
       }).catch(e => { delete S.months[ym]; onErr(e) })
     },
+
+    /* ---------- 일정 ---------- */
+    addEvent(e) {
+      const ev = { id: crypto.randomUUID(), color: 'c4', ...e, end: e.end && e.end >= e.start ? e.end : e.start }
+      S.events[ev.id] = ev; bump()
+      now(() => events.addEvent(S.uid, ev))
+    },
+    updateEvent(id, patch) {
+      const ev = S.events[id]; if (!ev) return
+      Object.assign(ev, patch); if (!ev.end || ev.end < ev.start) ev.end = ev.start
+      bump(); now(() => events.updateEvent(id, ev))
+    },
+    delEvent(id) { delete S.events[id]; bump(); now(() => events.removeEvent(id)) },
     toggleRoutine(id, on) { const d = myDay(S.date); if (on) d.checks[id] = true; else delete d.checks[id]; saveDay(S.date); bump() },
     addTodo(text, cat) { myDay(S.date).todos.push({ id: rid(), text, cat, done: false, pub: false }); saveDay(S.date); bump() },
     togglePubTodo(id) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) { t.pub = !t.pub; saveDay(S.date); bump() } },

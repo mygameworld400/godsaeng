@@ -7,6 +7,15 @@ export const CAT_ICONS = ['🏃', '📚', '🏠', '💪', '🧘', '🍎', '💧'
 export const COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 export const catIcon = c => c?.icon || '🏷️'
 
+/** 작은 ? 아이콘. 마우스를 올리면(또는 키보드 포커스) 설명이 뜬다. 클릭 동작 없음. */
+export function Help({ children }) {
+  return (
+    <span className="help" tabIndex={0} aria-label={typeof children === 'string' ? children : '도움말'}>
+      ?<span className="help-tip" role="tooltip">{children}</span>
+    </span>
+  )
+}
+
 /** 기본 카테고리에서 온 카테고리는 원본(base)의 이미지를 쓴다 (이미지는 복사하지 않음). */
 export const withImage = (cat, baseCats) => {
   if (!cat || cat.image) return cat

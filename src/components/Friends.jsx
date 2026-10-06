@@ -1,7 +1,7 @@
 import { useStore } from '../hooks/useStore'
 import { today, pretty } from '../lib/date'
 import { stat } from '../lib/stats'
-import { ConfirmX, avaOf, nickOf } from './common'
+import { ConfirmX, Help, avaOf, nickOf } from './common'
 
 export default function Friends() {
   const { S, act } = useStore()
@@ -25,8 +25,7 @@ export default function Friends() {
   return (
     <div className="cols">
       <section className="sheet">
-        <h2><span>오늘의 친구 순위</span></h2>
-        <p className="sub">{pretty(t)} 달성률이 높은 순서예요.</p>
+        <h2><span>오늘의 친구 순위</span><Help>{pretty(t)} 달성률이 높은 순서예요.</Help></h2>
         <div>
           {rows.map(r => (
             <Person key={r.id} id={r.id}>
@@ -43,7 +42,7 @@ export default function Friends() {
       </section>
 
       <section className="sheet">
-        <h2><span>친구 찾기</span></h2>
+        <h2><span>친구 찾기</span><Help>친구가 안 보이면 친구가 이 사이트에 가입했는지 확인해 주세요. 가입한 사람만 여기에 나타나요.</Help></h2>
         {addedMe.length > 0 && <>
           <p className="sub">나를 친구로 추가한 사람</p>
           <div>{addedMe.map(id => (
@@ -59,7 +58,6 @@ export default function Friends() {
             </Person>
           )) : <p className="empty">아직 추가할 사람이 없어요.</p>}
         </div>
-        <p className="note">친구가 안 보이면, 친구가 이 사이트에 가입해 닉네임을 정했는지 확인해 주세요. 닉네임을 정한 사람만 여기에 나타나요.</p>
       </section>
     </div>
   )

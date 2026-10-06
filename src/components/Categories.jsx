@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
-import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, catIcon, formVals, withImage } from './common'
+import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, catIcon, formVals, withImage } from './common'
 
 /* 카테고리 탭. 기본(관리자가 정해 둔 것, 골라서 추가)과 개별(직접 만든 것)은 개념상 구분일 뿐
    화면에서는 한 목록으로 보여 준다.
@@ -37,8 +37,7 @@ function CatList() {
 
   return (
     <section className="sheet">
-      <h2><span>카테고리</span></h2>
-      <p className="sub">아이콘을 누르면 그 카테고리 페이지로 가요. 흐린 아이콘은 아직 추가하지 않은 카테고리예요. 누르면 내 카테고리로 추가돼요.</p>
+      <h2><span>카테고리</span><Help>아이콘을 누르면 그 카테고리 페이지로 가요. 흐린 아이콘은 아직 추가하지 않은 카테고리예요. 누르면 내 카테고리로 추가돼요.</Help></h2>
       <div className="icons">
         {S.baseCats.map(b => {
           const added = addedOf(b)
@@ -63,6 +62,7 @@ function CatList() {
 function CatPage({ id }) {
   const { S, act } = useStore()
   const [edit, setEdit] = useState(false)
+  const [editTodo, setEditTodo] = useState(null)  // 수정 중인 투두 id
   const cat = S.me.cats.find(c => c.id === id)
   const [icon, setIcon] = useState(catIcon(cat))
   if (!cat) return (
@@ -72,6 +72,7 @@ function CatPage({ id }) {
     </div>
   )
   const d = act.catDetail(id), done = d.todos.filter(t => t.done).length
+  const isBase = !!cat.base  // 기본 카테고리는 이름·아이콘을 관리자가 정한다 (빼기만 가능)
   const routines = S.me.routines.filter(r => r.cat === id)
 
   const saveInfo = e => {
@@ -91,11 +92,19 @@ function CatPage({ id }) {
           <CatGlyph cat={withImage(cat, S.baseCats)} size={72} />
           <div className="grow">
             <p className="nick">{cat.name}</p>
-            <p className="sub">{cat.base ? '기본 카테고리' : '개별 카테고리'}{d.start ? ` · ${pretty(d.start)} 시작` : ''}</p>
+            <p className="sub">{d.start ? `${pretty(d.start)} 시작` : '시작 날짜 미정'}</p>
           </div>
-          <button className="btn sm" onClick={() => { setEdit(!edit); setIcon(catIcon(cat)) }}>{edit ? '닫기' : '이름·아이콘 수정'}</button>
+          {isBase
+            ? <ConfirmX onConfirm={() => { act.delCat(id); goCat() }} label="내 카테고리에서 빼기" className="btn sm" />
+            : <div className="row">
+                <button className="btn sm" onClick={() => { setEdit(!edit); setIcon(catIcon(cat)) }}>{edit ? '닫기' : '수정'}</button>
+                <ConfirmX onConfirm={() => { act.delCat(id); goCat() }} label="삭제" className="btn sm warn" />
+              </div>}
+          <Help>{isBase
+            ? '관리자가 준비한 카테고리라 이름과 아이콘은 바꿀 수 없어요. 빼도 카테고리 목록에서 다시 추가할 수 있어요. 빼면 이 카테고리의 목표·투두는 지워지고, 루틴과 투두는 미분류로 옮겨져요.'
+            : '직접 만든 카테고리라 이름·아이콘·색을 마음대로 바꿀 수 있어요. 삭제하면 목표·투두는 지워지고, 루틴과 투두는 미분류로 옮겨져요.'}</Help>
         </div>
-        {edit && (
+        {edit && !isBase && (
           <form className="addf col" onSubmit={saveInfo}>
             <label>이름<input className="inp" name="name" maxLength={12} defaultValue={cat.name} required /></label>
             <IconPicker value={icon} onChange={setIcon} />
@@ -105,11 +114,7 @@ function CatPage({ id }) {
                   <span className="cdot" style={{ background: `var(--${c})`, width: 16, height: 16 }} /></label>
               ))}
             </div>
-            <div className="row">
-              <button className="btn pri">저장</button>
-              <ConfirmX onConfirm={() => { act.delCat(id); goCat() }} label="카테고리 삭제" className="btn sm warn" />
-            </div>
-            <p className="sub">카테고리를 지워도 루틴과 투두는 남고 미분류로 옮겨져요.</p>
+            <div className="row"><button className="btn pri">저장</button></div>
           </form>
         )}
       </section>
@@ -124,11 +129,16 @@ function CatPage({ id }) {
         </section>
 
         <section className="sheet">
-          <div className="row between"><h2><span>투두리스트</span></h2><span className="pill"><b>{done}/{d.todos.length}</b> 완료</span></div>
-          <p className="sub">날짜와 상관없이 이 카테고리에서 해야 할 일이에요.</p>
-          {d.todos.length ? d.todos.map(t => (
+          <div className="row between"><h2><span>투두리스트</span><Help>날짜와 상관없이 이 카테고리에서 해야 할 일이에요.</Help></h2><span className="pill"><b>{done}/{d.todos.length}</b> 완료</span></div>
+          {d.todos.length ? d.todos.map(t => editTodo === t.id ? (
+            <form key={t.id} className="addf" onSubmit={e => { const v = formVals(e); if (v.text) act.editCatTodo(id, t.id, v.text); setEditTodo(null) }}>
+              <input className="inp" name="text" maxLength={60} defaultValue={t.text} autoFocus aria-label="할 일 수정" />
+              <button className="btn pri sm">저장</button><button type="button" className="btn sm" onClick={() => setEditTodo(null)}>취소</button>
+            </form>
+          ) : (
             <div key={t.id} className={'item' + (t.done ? ' done' : '')}>
               <label><input type="checkbox" checked={t.done} onChange={() => act.toggleCatTodo(id, t.id)} /><span className="t">{t.text}</span></label>
+              <button className="x" aria-label="수정" onClick={() => setEditTodo(t.id)}>✎</button>
               <button className="x" aria-label="삭제" onClick={() => act.delCatTodo(id, t.id)}>✕</button>
             </div>
           )) : <p className="empty">아직 할 일이 없어요.</p>}

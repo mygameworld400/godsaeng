@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import * as admin from '../services/adminService'
 import * as categories from '../services/categoryService'
-import { COLORS, ConfirmX, formVals } from './common'
+import { COLORS, ConfirmX, Help, formVals } from './common'
 import { makeIcon } from '../lib/cutout'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
@@ -42,8 +42,7 @@ function AccountRow({ a, code, onDone, toast }) {
         <form className="addf col" onSubmit={save}>
           <label>아이디<input className="inp" name="login" defaultValue={a.login} maxLength={16} autoCapitalize="none" spellCheck={false} /></label>
           <label>닉네임<input className="inp" name="nick" defaultValue={a.nick} maxLength={16} /></label>
-          <label>새 비밀번호<input className="inp" name="password" type="text" minLength={4} autoComplete="off" placeholder="비워 두면 그대로" /></label>
-          <p className="sub">비밀번호는 암호화돼 저장돼서 원래 값은 볼 수 없어요. 잊어버린 친구는 여기서 새 비밀번호로 바꿔 주세요.</p>
+          <label>새 비밀번호 <Help>비밀번호는 암호화돼 저장돼서 원래 값은 볼 수 없어요. 잊어버린 친구는 여기서 새 비밀번호로 바꿔 주세요.</Help><input className="inp" name="password" type="text" minLength={4} autoComplete="off" placeholder="비워 두면 그대로" /></label>
           <div className="row"><button className="btn pri" disabled={busy}>저장</button></div>
         </form>
       )}
@@ -108,8 +107,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
         {file && (
           <div className="row">
             <label className="toggle"><input type="checkbox" checked={cut} onChange={e => setCut(e.target.checked)} /> 배경 자동 제거</label>
-            {cut && <label className="toggle">강도 <input type="range" min={5} max={80} value={tol} onChange={e => setTol(+e.target.value)} /></label>}
-            <span className="sub">배경이 덜 지워지면 강도를 올리고, 그림이 같이 지워지면 내려 주세요.</span>
+            {cut && <label className="toggle">강도 <input type="range" min={5} max={80} value={tol} onChange={e => setTol(+e.target.value)} /></label>} <Help>배경이 덜 지워지면 강도를 올리고, 그림이 같이 지워지면 내려 주세요.</Help>
           </div>
         )}
         <div className="row">
@@ -155,14 +153,13 @@ export default function Settings() {
               {msg && <p className="sub" role="alert" style={{ flexBasis: '100%' }}>{msg}</p>}
             </form>
           ) : <>
-            <p className="sub">가입한 계정 {list.length}개예요. 아이디·닉네임·비밀번호를 바꾸거나 계정을 지울 수 있어요. 지운 계정의 기록은 되살릴 수 없어요.</p>
+            <p className="sub">가입한 계정 {list.length}개 <Help>아이디·닉네임·비밀번호를 바꾸거나 계정을 지울 수 있어요. 지운 계정의 기록은 되살릴 수 없어요.</Help></p>
             <div>
               {list.length ? list.map(a => (
                 <AccountRow key={a.id} a={a} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
               )) : <p className="empty">아직 가입한 계정이 없어요.</p>}
             </div>
-            <h2><span>기본 카테고리</span></h2>
-            <p className="sub">모두에게 보이는 기본 카테고리예요. 각자 카테고리 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</p>
+            <h2><span>기본 카테고리</span><Help>모두에게 보이는 기본 카테고리예요. 각자 카테고리 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</Help></h2>
             <div className="stack" style={{ gap: 10 }}>
               {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />

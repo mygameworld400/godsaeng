@@ -26,6 +26,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
 
+.help{position:relative;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1.2px solid var(--muted);color:var(--muted);
+  font-family:var(--f-body);font-size:10px;font-weight:700;line-height:1;vertical-align:middle;margin-left:6px;cursor:help;flex:none}
+.help-tip{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:max-content;max-width:min(260px,80vw);z-index:30;
+  background:var(--ink);color:var(--paper);border-radius:10px;padding:8px 11px;font-family:var(--f-body);font-size:13px;font-weight:400;line-height:1.5;
+  text-align:left;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s}
+.help-tip::before{content:"";position:absolute;left:50%;top:-5px;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:var(--ink)}
+.help:hover .help-tip,.help:focus-visible .help-tip{opacity:1;visibility:visible}
 .gear{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:14px;z-index:20;border:0;background:none;padding:4px;font-size:26px;line-height:1;cursor:pointer;transition:transform .2s}
 .gear:hover{transform:rotate(30deg)}
 .gear.on{transform:rotate(90deg)}
@@ -40,7 +47,7 @@ button{cursor:pointer}
 .note{border:1.5px dashed var(--ink);background:var(--paper);border-radius:12px;padding:10px 14px;font-size:14px}
 .sheet{background:var(--paper);border:1.5px solid var(--ink);border-radius:14px;box-shadow:3px 3px 0 var(--ink);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .sheet h2{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0;line-height:1.2;text-wrap:balance}
-.sheet h2 span{background:linear-gradient(transparent 58%,var(--hl) 58%);padding-inline:3px}
+.sheet h2 span:not(.help):not(.help-tip){background:linear-gradient(transparent 58%,var(--hl) 58%);padding-inline:3px}
 .sub{color:var(--muted);font-size:13.5px;margin:0}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -183,5 +190,21 @@ select.inp{width:auto;max-width:130px}
 .cal .d.sel .p{color:var(--on-hl)}
 .cal .d.sel .gauge{background:var(--paper)}
 .cal .d.sel .gauge i{background:var(--ink)}
+.cal .d .big{font-family:var(--f-display);font-size:17px;line-height:1.1;margin-top:2px}
+.cal.plan .d{min-height:74px;align-items:stretch;padding:4px 3px;gap:2px}
+.cal.plan .d .n{text-align:left;padding-left:3px}
+.cal .evs{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cal .ev{display:block;font-size:11px;line-height:1.35;color:#fff;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 -4px;text-align:left}
+.cal .ev.s{border-top-left-radius:5px;border-bottom-left-radius:5px;margin-left:0}
+.cal .ev.e{border-top-right-radius:5px;border-bottom-right-radius:5px;margin-right:0}
+.cal .more{font-size:11px;color:var(--muted);text-align:left;padding-left:3px}
+.cal .d.sel .more{color:var(--on-hl)}
+.evpanel{display:flex;flex-direction:column;gap:6px;border-top:1.5px dashed var(--line);padding-top:12px}
+.evh{font-family:var(--f-display);font-weight:400;font-size:17px;margin:0}
+.evpanel .item .sub{flex:none}
+.evform{display:flex;flex-direction:column;gap:6px}
+.swatch{width:18px;height:18px;border-radius:50%;border:2px solid var(--paper);box-shadow:0 0 0 1.5px var(--line);padding:0}
+.swatch.on{box-shadow:0 0 0 2px var(--ink)}
+@media (max-width:560px){.cal.plan .d{min-height:60px}.cal .ev{font-size:10px}}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:999px;padding:8px 18px;font-size:14px;max-width:calc(100% - 32px)}
 @media (max-width:480px){.brand{font-size:28px}.sheet{padding:14px}.ring{width:108px;height:108px}}

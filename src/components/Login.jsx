@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { validId } from '../services/authService'
-import { AVA, AvaPicker, formVals } from './common'
+import { AVA, AvaPicker, Help, formVals } from './common'
 
 export const ERR = {
   bad_code: '입장코드가 맞지 않아요.',
@@ -42,21 +42,17 @@ export default function Login() {
   return (
     <form className="sheet" onSubmit={submit} style={{ maxWidth: 520 }}>
       <h2><span>{up ? '갓생홈피 만들기' : '갓생홈피 입장'}</span></h2>
-      <p className="sub">{up
-        ? '홈피에서 쓸 닉네임과 로그인할 아이디·비밀번호를 정해요. 친구한테 받은 입장코드도 필요해요.'
-        : '아이디와 비밀번호로 들어와요.'}</p>
       {up && <>
-        <label htmlFor="li-nick">닉네임</label>
+        <label htmlFor="li-nick">닉네임<Help>홈피에서 친구들에게 보이는 이름이에요. 나중에 언제든 바꿀 수 있어요.</Help></label>
         <input className="inp" id="li-nick" name="nick" maxLength={16} placeholder="홈피에 보이는 이름 (예: 새벽러너 지니)" required />
-        <p className="sub">닉네임은 나중에 홈피에서 언제든 바꿀 수 있어요.</p>
       </>}
-      <label htmlFor="li-login">아이디</label>
+      <label htmlFor="li-login">아이디{up && <Help>로그인할 때 쓰는 아이디예요. 영문으로 시작하는 영문·숫자 3~16자이고, 바꿀 수 없어요.</Help>}</label>
       <input className="inp" id="li-login" name="login" maxLength={16} autoComplete="username" autoCapitalize="none" spellCheck={false}
         pattern="[A-Za-z][A-Za-z0-9]{2,15}" title="영문으로 시작하는 영문·숫자 3~16자" placeholder={up ? '로그인할 때 쓰는 아이디, 영문·숫자 3~16자 (예: jini99)' : ''} required />
       <label htmlFor="li-pw">비밀번호</label>
       <input className="inp" id="li-pw" name="password" type="password" minLength={4} autoComplete={up ? 'new-password' : 'current-password'} placeholder={up ? '4자 이상' : ''} required />
       {up && <>
-        <label htmlFor="li-code">입장코드</label>
+        <label htmlFor="li-code">입장코드<Help>친구한테 받은 코드예요. 코드가 있어야 가입할 수 있어요.</Help></label>
         <input className="inp" id="li-code" name="code" autoComplete="off" placeholder="친구한테 받은 코드" required />
         <AvaPicker value={emoji} onChange={setEmoji} />
       </>}

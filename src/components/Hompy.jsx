@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { WD, today, addDays, toD, pretty, localDate } from '../lib/date'
 import { stat, streak, pc } from '../lib/stats'
-import { AvaPicker, ConfirmX, Groups, Ring, avaOf, nickOf, formVals } from './common'
+import { AvaPicker, ConfirmX, Groups, Help, Ring, avaOf, nickOf, formVals } from './common'
 
 export default function Hompy() {
   const { S, act } = useStore()
@@ -85,9 +85,8 @@ export default function Hompy() {
         </div>
         {mine && edit && (
           <form className="addf col" onSubmit={saveProfile}>
-            <label htmlFor="pf-nick">닉네임</label>
+            <label htmlFor="pf-nick">닉네임{p.handle && <Help>{`친구들에게 보이는 이름이라 언제든 바꿔도 돼요. 로그인 아이디는 「${p.handle}」 그대로예요.`}</Help>}</label>
             <input className="inp" id="pf-nick" name="nick" maxLength={16} defaultValue={p.nick} required />
-            {p.handle && <p className="sub">로그인 아이디는 「{p.handle}」 그대로예요. 닉네임은 친구들에게 보이는 이름이라 언제든 바꿔도 돼요.</p>}
             <label htmlFor="pf-bio">한 줄 소개</label>
             <input className="inp" id="pf-bio" name="bio" maxLength={60} defaultValue={p.bio || ''} placeholder="예: 올해는 진짜 아침형 인간" />
             <AvaPicker value={emoji} onChange={setEmoji} />

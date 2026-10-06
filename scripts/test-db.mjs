@@ -159,6 +159,18 @@ try {
   ok((await A.sb.from('gs_private').select('cat_details').eq('user_id', A.id).single()).data?.cat_details?.c1?.goal === '비밀목표', 'A 는 자기 카테고리 세부를 다시 불러옴')
   ok((await B.sb.from('gs_private').select('cat_details').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 카테고리 목표·투두를 못 봄')
 
+  console.log('일정')
+  const evEnd = new Date(Date.parse(today) + 2 * 864e5).toISOString().slice(0, 10)
+  const ev = await A.sb.from('gs_events').insert({ user_id: A.id, title: '휴가', start_date: today, end_date: evEnd }).select().single()
+  ok(!ev.error, 'A 여러 날 일정 추가 (휴가 3일)')
+  ok(!(await A.sb.from('gs_events').insert({ user_id: A.id, title: '치과', start_date: today })).error, 'A 하루 일정 추가 (끝 날짜 없음)')
+  ok(!!(await A.sb.from('gs_events').insert({ user_id: A.id, title: '거꾸로', start_date: evEnd, end_date: today })).error, '끝 날짜가 시작보다 빠르면 거절')
+  ok((await A.sb.from('gs_events').select('*').eq('user_id', A.id)).data?.length === 2, 'A 는 자기 일정 2개를 봄')
+  ok((await B.sb.from('gs_events').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 일정을 못 봄')
+  ok(!!(await B.sb.from('gs_events').insert({ user_id: A.id, title: '사칭', start_date: today })).error, 'B 는 A 일정에 못 끼워 넣음')
+  ok(!(await A.sb.from('gs_events').update({ title: '여름휴가' }).eq('id', ev.data?.id)).error, 'A 일정 수정')
+  ok(!(await A.sb.from('gs_events').delete().eq('id', ev.data?.id)).error, 'A 일정 삭제')
+
   console.log('외부인')
   const anon = await client().from('gs_days').select('*')
   ok(anon.data?.length === 0, '로그인 안 하면 아무것도 안 보임')

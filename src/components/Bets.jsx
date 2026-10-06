@@ -1,7 +1,7 @@
 import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
 import { chStat } from '../lib/stats'
-import { ConfirmX, avaOf, nickOf, formVals } from './common'
+import { ConfirmX, Help, avaOf, nickOf, formVals } from './common'
 
 export default function Bets() {
   const { S, act } = useStore()
@@ -20,8 +20,7 @@ export default function Bets() {
   return (
     <div className="stack">
       <form className="sheet" onSubmit={create}>
-        <h2><span>새 내기 만들기</span></h2>
-        <p className="sub">오늘부터 시작해요. 매일 한 번 인증하고, 끝나는 날 가장 적게 지킨 사람이 벌칙을 받아요.</p>
+        <h2><span>새 내기 만들기</span><Help>오늘부터 시작해요. 매일 한 번 인증하고, 끝나는 날 가장 적게 지킨 사람이 벌칙을 받아요.</Help></h2>
         <div className="addf">
           <input className="inp" name="title" maxLength={30} placeholder="도전 (예: 매일 운동하기)" aria-label="도전 이름" required />
           <select className="inp" name="days" aria-label="기간" defaultValue="7">

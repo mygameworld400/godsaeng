@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { today, pretty } from '../lib/date'
 import { stat, pc } from '../lib/stats'
-import { MOODS, ConfirmX, CatIcon, CatSelect, Groups, PubToggle, formVals, withImage } from './common'
+import { MOODS, ConfirmX, CatIcon, CatSelect, Groups, PubToggle, formVals, withImage, Help } from './common'
 import Calendar from './Calendar'
 
 export default function Today() {
@@ -35,9 +35,8 @@ export default function Today() {
 
       <section className="sheet">
         <div className="row between">
-          <h2><button className="linkh" onClick={() => { location.hash = 'cats' }}><span>내 카테고리</span> ›</button></h2>
+          <h2><button className="linkh" onClick={() => { location.hash = 'cats' }}><span>내 카테고리</span> ›</button><Help>아이콘을 누르면 그 카테고리의 루틴과 투두만 모아 볼 수 있어요. 카테고리 추가·수정은 카테고리 탭에서 해요.</Help></h2>
         </div>
-        <p className="sub">아이콘을 누르면 그 카테고리의 루틴과 투두만 모아 볼 수 있어요. 카테고리 추가·수정은 카테고리 탭에서 해요.</p>
         <div className="icons">
           <CatIcon cat={{ icon: '✨' }} label="전체" on={!filter} onClick={() => setFilter('')} />
           {me.cats.map(c => <CatIcon key={c.id} cat={withImage(c, S.baseCats)} on={filter === c.id} onClick={() => setFilter(filter === c.id ? '' : c.id)} />)}
@@ -47,8 +46,7 @@ export default function Today() {
 
       <div className="cols">
         <section className="sheet">
-          <div className="row between"><h2><span>데일리 루틴</span></h2><span className="pill">달성 <b>{pc(st.rD, st.rT)}%</b></span></div>
-          <p className="sub">매일 다시 나타나는 칸이에요. 공개를 켠 루틴만 미니홈피에 이름이 보이고, 나머지는 달성률에만 들어가요.</p>
+          <div className="row between"><h2><span>데일리 루틴</span><Help>매일 다시 나타나는 칸이에요. 공개를 켠 루틴만 미니홈피에 이름이 보이고, 나머지는 달성률에만 들어가요.</Help></h2><span className="pill">달성 <b>{pc(st.rD, st.rT)}%</b></span></div>
           <Groups profile={me} items={routines} filter={filter} empty="루틴이 아직 없어요. 아래에 첫 루틴을 적어 보세요." row={r => (
             <div key={r.id} className={'item' + (r._done ? ' done' : '')}>
               <label><input type="checkbox" checked={r._done} onChange={e => act.toggleRoutine(r.id, e.target.checked)} /><span className="t">{r.text}</span></label>
@@ -64,8 +62,7 @@ export default function Today() {
         </section>
 
         <section className="sheet">
-          <div className="row between"><h2><span>{isToday ? '오늘의' : '이 날의'} 투두</span></h2><span className="pill">달성 <b>{pc(st.tD, st.tT)}%</b></span></div>
-          <p className="sub">이 날짜에만 있는 할 일이에요. 공개를 켠 투두만 미니홈피에 이름이 보여요.</p>
+          <div className="row between"><h2><span>{isToday ? '오늘의' : '이 날의'} 투두</span><Help>이 날짜에만 있는 할 일이에요. 공개를 켠 투두만 미니홈피에 이름이 보여요.</Help></h2><span className="pill">달성 <b>{pc(st.tD, st.tT)}%</b></span></div>
           <Groups profile={me} items={todos} filter={filter} empty="아직 적은 투두가 없어요." row={t => (
             <div key={t.id} className={'item' + (t._done ? ' done' : '')}>
               <label><input type="checkbox" checked={t._done} onChange={e => act.toggleTodo(t.id, e.target.checked)} /><span className="t">{t.text}</span></label>
@@ -90,8 +87,8 @@ export default function Today() {
         </div>
         <textarea className="diary" maxLength={2000} placeholder="오늘 하루는 어땠나요?" aria-label="일기"
           value={S.diary[S.date] || ''} onChange={e => act.setDiary(e.target.value)} />
-        <label className="toggle"><input type="checkbox" checked={d.pub} onChange={e => act.setPub(e.target.checked)} /> 이 일기를 내 미니홈피에 공개하기</label>
-        <p className="sub">{d.pub ? '친구들이 내 미니홈피에서 이 일기를 읽을 수 있어요.' : '체크하지 않으면 나만 볼 수 있어요.'}</p>
+        <label className="toggle"><input type="checkbox" checked={d.pub} onChange={e => act.setPub(e.target.checked)} /> 이 일기를 내 미니홈피에 공개하기
+          <Help>체크하면 친구들이 내 미니홈피에서 이 일기를 읽을 수 있어요. 체크하지 않으면 나만 볼 수 있어요.</Help></label>
       </section>
     </div>
   )
