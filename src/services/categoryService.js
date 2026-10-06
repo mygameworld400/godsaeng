@@ -2,7 +2,7 @@ import { supabase, unwrap } from '../lib/supabase'
 
 const toApp = r => ({ id: r.id, name: r.name, icon: r.icon, color: r.color, sort: r.sort, image: r.image || '' })
 
-/** 관리자가 정해 둔 기본 카테고리 (멤버만 읽힘) */
+/** 관리자가 정해 둔 기본 활동 (멤버만 읽힘) */
 export async function listBaseCats() {
   return unwrap(await supabase.from('gs_base_cats').select('*').order('sort').order('created_at')).map(toApp)
 }

@@ -3,10 +3,10 @@ import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
 import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, catIcon, formVals, withImage } from './common'
 
-/* 카테고리 탭. 기본(관리자가 정해 둔 것, 골라서 추가)과 개별(직접 만든 것)은 개념상 구분일 뿐
+/* 활동 탭. 기본(관리자가 정해 둔 것, 골라서 추가)과 개별(직접 만든 것)은 개념상 구분일 뿐
    화면에서는 한 목록으로 보여 준다.
-   아이콘을 누르면 그 카테고리 페이지(시작 날짜 · 목표 · 투두리스트)로 간다.
-   지금은 모든 카테고리가 같은 기본 구성이다. */
+   아이콘을 누르면 그 활동 페이지(시작 날짜 · 목표 · 투두리스트)로 간다.
+   지금은 모든 활동이 같은 기본 구성이다. */
 
 const goCat = id => { location.hash = id ? 'cats/' + id : 'cats' }
 
@@ -37,7 +37,7 @@ function CatList() {
 
   return (
     <section className="sheet">
-      <h2><span>카테고리</span><Help>아이콘을 누르면 그 카테고리 페이지로 가요. 흐린 아이콘은 아직 추가하지 않은 카테고리예요. 누르면 내 카테고리로 추가돼요.</Help></h2>
+      <h2><span>활동</span><Help>아이콘을 누르면 그 활동 페이지로 가요. 흐린 아이콘은 아직 추가하지 않은 활동이에요. 누르면 내 활동으로 추가돼요.</Help></h2>
       <div className="icons">
         {S.baseCats.map(b => {
           const added = addedOf(b)
@@ -46,7 +46,7 @@ function CatList() {
             : <CatIcon key={b.id} cat={b} dim badge="+" onClick={() => act.addBaseCat(b)} />
         })}
         {custom.map(c => <CatIcon key={c.id} cat={c} onClick={() => goCat(c.id)} />)}
-        <CatIcon cat={{ icon: '＋' }} label="새 카테고리" on={adding} onClick={() => setAdding(!adding)} />
+        <CatIcon cat={{ icon: '＋' }} label="새 활동" on={adding} onClick={() => setAdding(!adding)} />
       </div>
       {adding && (
         <form className="addf col" onSubmit={create}>
@@ -67,12 +67,12 @@ function CatPage({ id }) {
   const [icon, setIcon] = useState(catIcon(cat))
   if (!cat) return (
     <div className="sheet">
-      <p className="empty">이 카테고리를 찾지 못했어요. 지워졌을 수 있어요.</p>
-      <div className="row"><button className="btn" onClick={() => goCat()}>‹ 카테고리 목록</button></div>
+      <p className="empty">이 활동을 찾지 못했어요. 지워졌을 수 있어요.</p>
+      <div className="row"><button className="btn" onClick={() => goCat()}>‹ 활동 목록</button></div>
     </div>
   )
   const d = act.catDetail(id), done = d.todos.filter(t => t.done).length
-  const isBase = !!cat.base  // 기본 카테고리는 이름·아이콘을 관리자가 정한다 (빼기만 가능)
+  const isBase = !!cat.base  // 기본 활동은 이름·아이콘을 관리자가 정한다 (빼기만 가능)
   const routines = S.me.routines.filter(r => r.cat === id)
 
   const saveInfo = e => {
@@ -85,7 +85,7 @@ function CatPage({ id }) {
 
   return (
     <div className="stack">
-      <div className="row"><button className="btn sm" onClick={() => goCat()}>‹ 카테고리 목록</button></div>
+      <div className="row"><button className="btn sm" onClick={() => goCat()}>‹ 활동 목록</button></div>
 
       <section className="sheet">
         <div className="hero">
@@ -95,14 +95,14 @@ function CatPage({ id }) {
             <p className="sub">{d.start ? `${pretty(d.start)} 시작` : '시작 날짜 미정'}</p>
           </div>
           {isBase
-            ? <ConfirmX onConfirm={() => { act.delCat(id); goCat() }} label="내 카테고리에서 빼기" className="btn sm" />
+            ? <ConfirmX onConfirm={() => { act.delCat(id); goCat() }} label="내 활동에서 빼기" className="btn sm" />
             : <div className="row">
                 <button className="btn sm" onClick={() => { setEdit(!edit); setIcon(catIcon(cat)) }}>{edit ? '닫기' : '수정'}</button>
                 <ConfirmX onConfirm={() => { act.delCat(id); goCat() }} label="삭제" className="btn sm warn" />
               </div>}
           <Help>{isBase
-            ? '관리자가 준비한 카테고리라 이름과 아이콘은 바꿀 수 없어요. 빼도 카테고리 목록에서 다시 추가할 수 있어요. 빼면 이 카테고리의 목표·투두는 지워지고, 루틴과 투두는 미분류로 옮겨져요.'
-            : '직접 만든 카테고리라 이름·아이콘·색을 마음대로 바꿀 수 있어요. 삭제하면 목표·투두는 지워지고, 루틴과 투두는 미분류로 옮겨져요.'}</Help>
+            ? '관리자가 준비한 활동이라 이름과 아이콘은 바꿀 수 없어요. 빼도 활동 목록에서 다시 추가할 수 있어요. 빼면 이 활동의 목표·투두는 지워지고, 루틴과 투두는 미분류로 옮겨져요.'
+            : '직접 만든 활동이라 이름·아이콘·색을 마음대로 바꿀 수 있어요. 삭제하면 목표·투두는 지워지고, 루틴과 투두는 미분류로 옮겨져요.'}</Help>
         </div>
         {edit && !isBase && (
           <form className="addf col" onSubmit={saveInfo}>
@@ -129,7 +129,7 @@ function CatPage({ id }) {
         </section>
 
         <section className="sheet">
-          <div className="row between"><h2><span>투두리스트</span><Help>날짜와 상관없이 이 카테고리에서 해야 할 일이에요.</Help></h2><span className="pill"><b>{done}/{d.todos.length}</b> 완료</span></div>
+          <div className="row between"><h2><span>투두리스트</span><Help>날짜와 상관없이 이 활동에서 해야 할 일이에요.</Help></h2><span className="pill"><b>{done}/{d.todos.length}</b> 완료</span></div>
           {d.todos.length ? d.todos.map(t => editTodo === t.id ? (
             <form key={t.id} className="addf" onSubmit={e => { const v = formVals(e); if (v.text) act.editCatTodo(id, t.id, v.text); setEditTodo(null) }}>
               <input className="inp" name="text" maxLength={60} defaultValue={t.text} autoFocus aria-label="할 일 수정" />
@@ -151,7 +151,7 @@ function CatPage({ id }) {
 
       {routines.length > 0 && (
         <section className="sheet">
-          <h2><span>이 카테고리의 데일리 루틴</span></h2>
+          <h2><span>이 활동의 데일리 루틴</span></h2>
           {routines.map(r => <div key={r.id} className="item ro"><span className="mark">↻</span><span className="t">{r.text}</span></div>)}
         </section>
       )}

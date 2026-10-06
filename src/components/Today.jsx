@@ -7,12 +7,12 @@ import Calendar from './Calendar'
 
 export default function Today() {
   const { S, act } = useStore()
-  const [filter, setFilter] = useState('')  // '' 전체 / 'none' 미분류 / 카테고리 id
+  const [filter, setFilter] = useState('')  // '' 전체 / 'none' 미분류 / 활동 id
   const me = S.me, d = act.myDay(S.date), isToday = S.date === today(), st = stat(me, d, true)
   const routines = me.routines.map(r => ({ ...r, _done: !!d.checks[r.id] }))
   const todos = d.todos.map(t => ({ ...t, _done: !!t.done }))
 
-  const catFor = filter === 'none' ? '' : filter  // 새 항목 기본 카테고리
+  const catFor = filter === 'none' ? '' : filter  // 새 항목 기본 활동
   const add = fn => e => { const v = formVals(e); if (v.text) { fn(v); e.currentTarget.reset() } }
 
   return (
@@ -35,7 +35,7 @@ export default function Today() {
 
       <section className="sheet">
         <div className="row between">
-          <h2><button className="linkh" onClick={() => { location.hash = 'cats' }}><span>내 카테고리</span> ›</button><Help>아이콘을 누르면 그 카테고리의 루틴과 투두만 모아 볼 수 있어요. 카테고리 추가·수정은 카테고리 탭에서 해요.</Help></h2>
+          <h2><button className="linkh" onClick={() => { location.hash = 'cats' }}><span>내 활동</span> ›</button><Help>아이콘을 누르면 그 활동의 루틴과 투두만 모아 볼 수 있어요. 활동 추가·수정은 활동 탭에서 해요.</Help></h2>
         </div>
         <div className="icons">
           <CatIcon cat={{ icon: '✨' }} label="전체" on={!filter} onClick={() => setFilter('')} />

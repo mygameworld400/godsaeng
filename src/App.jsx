@@ -9,8 +9,8 @@ import Bets from './components/Bets'
 import Settings from './components/Settings'
 import Categories from './components/Categories'
 
-const TABS = [['today', '오늘'], ['cats', '카테고리'], ['hompy', '미니홈피'], ['friends', '친구'], ['bets', '내기']]
-// 'cats/<id>' 는 카테고리 페이지
+const TABS = [['today', '오늘'], ['cats', '활동'], ['hompy', '미니홈피'], ['friends', '친구'], ['bets', '내기']]
+// 'cats/<id>' 는 활동 페이지
 const fromHash = () => { const h = decodeURIComponent(location.hash.slice(1)); return h === 'settings' || h.startsWith('cats/') || TABS.some(t => t[0] === h) ? h : 'today' }
 
 export default function App() {

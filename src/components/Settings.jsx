@@ -50,7 +50,7 @@ function AccountRow({ a, code, onDone, toast }) {
   )
 }
 
-/** 기본 카테고리 한 줄: 이미지(누끼 제거)·이모지·이름·색·순서 수정, 삭제 */
+/** 기본 활동 한 줄: 이미지(누끼 제거)·이모지·이름·색·순서 수정, 삭제 */
 function BaseCatForm({ c, code, onDone, toast }) {
   const [file, setFile] = useState(null)
   const [cut, setCut] = useState(true)
@@ -77,14 +77,14 @@ function BaseCatForm({ c, code, onDone, toast }) {
         id: c?.id, name: v.name, icon: v.icon, color: v.color, sort: +v.sort || 0,
         image: preview || (clear ? '' : undefined),
       })
-      toast(c ? '저장했어요.' : '기본 카테고리를 추가했어요.')
+      toast(c ? '저장했어요.' : '기본 활동을 추가했어요.')
       if (!c) { form.reset(); setFile(null); setPreview('') }
       onDone()
     } catch (err) { toast(explain(err)) }
     setBusy(false)
   }
   const del = async () => {
-    try { await categories.adminDeleteBaseCat(code, c.id); toast('지웠어요. 이미 추가한 사람의 카테고리는 남아 있어요.'); onDone() } catch (err) { toast(explain(err)) }
+    try { await categories.adminDeleteBaseCat(code, c.id); toast('지웠어요. 이미 추가한 사람의 활동은 남아 있어요.'); onDone() } catch (err) { toast(explain(err)) }
   }
   return (
     <form className="basecat" onSubmit={save}>
@@ -98,7 +98,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
       <div className="basecat-fields">
         <div className="addf">
           <input className="inp" name="icon" defaultValue={c?.icon || ''} maxLength={4} placeholder="🏷️" aria-label="이모지 (이미지가 없을 때)" title="이미지가 없을 때 쓰는 이모지" style={{ flex: '0 0 64px' }} />
-          <input className="inp" name="name" defaultValue={c?.name || ''} maxLength={12} placeholder="카테고리 이름" aria-label="이름" required />
+          <input className="inp" name="name" defaultValue={c?.name || ''} maxLength={12} placeholder="활동 이름" aria-label="이름" required />
           <select className="inp" name="color" defaultValue={c?.color || 'c1'} aria-label="색">
             {COLORS.map((k, i) => <option key={k} value={k}>색 {i + 1}</option>)}
           </select>
@@ -159,7 +159,7 @@ export default function Settings() {
                 <AccountRow key={a.id} a={a} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
               )) : <p className="empty">아직 가입한 계정이 없어요.</p>}
             </div>
-            <h2><span>기본 카테고리</span><Help>모두에게 보이는 기본 카테고리예요. 각자 카테고리 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</Help></h2>
+            <h2><span>기본 활동</span><Help>모두에게 보이는 기본 활동이에요. 각자 활동 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</Help></h2>
             <div className="stack" style={{ gap: 10 }}>
               {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />

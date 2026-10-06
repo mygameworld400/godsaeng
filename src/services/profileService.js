@@ -11,13 +11,13 @@ export async function listProfiles() {
   return Object.fromEntries(rows.map(r => [r.id, toApp(r)]))
 }
 
-/** 본인 전용 데이터: 전체 루틴(비공개 포함) + 카테고리 세부. 없으면 null */
+/** 본인 전용 데이터: 전체 루틴(비공개 포함) + 활동 세부. 없으면 null */
 export async function myPrivate(uid) {
   const rows = unwrap(await supabase.from('gs_private').select('routines,cat_details').eq('user_id', uid))
   return rows[0] ? { routines: rows[0].routines, catDetails: rows[0].cat_details || {} } : null
 }
 
-/** 공개 프로필에는 공개 루틴과 개수만, 전체 목록과 카테고리 세부는 gs_private 에. */
+/** 공개 프로필에는 공개 루틴과 개수만, 전체 목록과 활동 세부는 gs_private 에. */
 export async function saveProfile(uid, p, catDetails = {}) {
   const now = new Date().toISOString()
   unwrap(await supabase.from('gs_profiles').upsert({

@@ -63,7 +63,7 @@ export function StoreProvider({ children }) {
     if (S.me && !S.view) await setView(uid)
     S.loaded = true; bump()
   }
-  /** 기본 카테고리에서 추가한 내 카테고리는 이름·아이콘·색을 관리자가 정한 원본에 맞춘다 (관리자 수정이 모두에게 반영되게). */
+  /** 기본 활동에서 추가한 내 활동은 이름·아이콘·색을 관리자가 정한 원본에 맞춘다 (관리자 수정이 모두에게 반영되게). */
   function syncBaseCats() {
     if (!S.me) return
     let changed = false
@@ -106,7 +106,7 @@ export function StoreProvider({ children }) {
     }
     auth.getSession().then(apply)
     const sub = auth.onAuth(apply)
-    // 창으로 돌아오면 + 1분마다: 관리자 변경(계정·기본 카테고리·이미지)과 친구 기록을 반영
+    // 창으로 돌아오면 + 1분마다: 관리자 변경(계정·기본 활동·이미지)과 친구 기록을 반영
     const soft = () => { if (document.visibilityState === 'visible') softRefresh().catch(() => {}) }
     document.addEventListener('visibilitychange', soft)
     const iv = setInterval(soft, 60000)
@@ -150,10 +150,10 @@ export function StoreProvider({ children }) {
     },
     saveProfile(patch) { Object.assign(S.me, patch); saveMe(); bump() },
 
-    /* ---------- 카테고리 ---------- */
-    // 기본 카테고리를 내 카테고리로 복사한다. base 로 원본을 기억해 '추가됨' 표시에 쓴다.
+    /* ---------- 활동 ---------- */
+    // 기본 활동을 내 활동으로 복사한다. base 로 원본을 기억해 '추가됨' 표시에 쓴다.
     addBaseCat(b) {
-      if (S.me.cats.length >= 20) return toast('카테고리는 20개까지 만들 수 있어요.')
+      if (S.me.cats.length >= 20) return toast('활동은 20개까지 만들 수 있어요.')
       if (S.me.cats.some(c => c.base === b.id)) return
       const id = rid()
       S.me.cats.push({ id, name: b.name, icon: b.icon, color: b.color, base: b.id })
@@ -162,7 +162,7 @@ export function StoreProvider({ children }) {
       return id
     },
     addCat(name, icon) {
-      if (S.me.cats.length >= 20) return toast('카테고리는 20개까지 만들 수 있어요.')
+      if (S.me.cats.length >= 20) return toast('활동은 20개까지 만들 수 있어요.')
       const id = rid()
       S.me.cats.push({ id, name, icon: icon || '🏷️', color: 'c' + (S.me.cats.length % 6 + 1) })
       S.catDetails[id] = { start: today(), goal: '', todos: [] }

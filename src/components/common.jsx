@@ -16,7 +16,7 @@ export function Help({ children }) {
   )
 }
 
-/** 기본 카테고리에서 온 카테고리는 원본(base)의 이미지를 쓴다 (이미지는 복사하지 않음). */
+/** 기본 활동에서 온 활동은 원본(base)의 이미지를 쓴다 (이미지는 복사하지 않음). */
 export const withImage = (cat, baseCats) => {
   if (!cat || cat.image) return cat
   const b = cat.base ? baseCats.find(x => x.id === cat.base) : null
@@ -30,7 +30,7 @@ export function CatGlyph({ cat, size }) {
     : <span className="cglyph-emoji" style={size ? { fontSize: size * 0.8 } : undefined}>{catIcon(cat)}</span>
 }
 
-/** 카테고리 아이콘 + 이름. dim 이면 아직 추가 안 한 기본 카테고리. */
+/** 활동 아이콘 + 이름. dim 이면 아직 추가 안 한 기본 활동. */
 export function CatIcon({ cat, on, dim, badge, onClick, label }) {
   return (
     <button type="button" className={'cicon' + (on ? ' on' : '') + (dim ? ' dim' : '')} onClick={onClick} aria-pressed={on}>
@@ -72,15 +72,15 @@ export function AvaPicker({ value, onChange }) {
 
 export function CatSelect({ name, cats, value = '' }) {
   return (
-    <select className="inp" name={name} aria-label="카테고리" defaultValue={value} key={value}>
+    <select className="inp" name={name} aria-label="활동" defaultValue={value} key={value}>
       <option value="">미분류</option>
       {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
     </select>
   )
 }
 
-/** 카테고리별로 묶어 그린다. items 에는 _done 이 있어야 한다.
-    filter: '' 전체 / 'none' 미분류 / 카테고리 id */
+/** 활동별로 묶어 그린다. items 에는 _done 이 있어야 한다.
+    filter: '' 전체 / 'none' 미분류 / 활동 id */
 export function Groups({ profile, items, row, empty, filter = '' }) {
   if (!items.length) return <p className="empty">{empty}</p>
   let cats = [...(profile.cats || []), { id: '', name: '미분류', color: '' }]
@@ -98,7 +98,7 @@ export function Groups({ profile, items, row, empty, filter = '' }) {
       </div>
     )
   }).filter(Boolean)
-  return out.length ? out : <p className="empty">이 카테고리에는 아직 아무것도 없어요.</p>
+  return out.length ? out : <p className="empty">이 활동에는 아직 아무것도 없어요.</p>
 }
 
 /** 공개/비공개 토글 */
