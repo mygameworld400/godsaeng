@@ -277,12 +277,12 @@ export function StoreProvider({ children }) {
     setPub(on) { myDay(S.date).pub = on; saveDay(S.date); bump() },
     /* ---------- 챌린지 ---------- */
     /** 참여: 참여자로 등록하고, 연결된 활동(예: 언어 → 일본어)이 없으면 내 활동에 담는다 */
-    joinQuest(q) {
+    joinQuest(q, progress = {}) {
       if (q.members.some(m => m.userId === S.uid)) return
-      q.members.push({ userId: S.uid, progress: {}, joinedAt: new Date().toISOString() })
+      q.members.push({ userId: S.uid, progress, joinedAt: new Date().toISOString() })
       const b = S.baseCats.find(x => x.id === q.baseId), o = b && q.optionId ? b.options.find(x => x.id === q.optionId) : null
       if (b && !S.me.cats.some(c => c.base === b.id && (c.opt || null) === (o?.id || null))) act.addBaseCat(b, o || undefined)
-      bump(); now(() => quests.joinQuest(q.id, S.uid))
+      bump(); now(() => quests.joinQuest(q.id, S.uid, progress))
     },
     leaveQuest(q) { q.members = q.members.filter(m => m.userId !== S.uid); bump(); now(() => quests.leaveQuest(q.id, S.uid)) },
     /** 내 챌린지 진도 저장 (0.45초 모아서) */

@@ -142,6 +142,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
             <option value="reading">페이지: 독서</option>
             <option value="workout">페이지: 운동</option>
             <option value="media">페이지: 영화·드라마</option>
+            <option value="miracle">페이지: 미라클모닝(챌린지만)</option>
           </select>
         </div>
         {file && (
@@ -208,7 +209,7 @@ function QuestForm({ q, code, baseCats, plansList, onDone, toast }) {
     const form = e.currentTarget, v = formVals(e)
     if (!v.title) return
     try {
-      await questApi.adminSaveQuest(code, { id: q?.id, title: v.title, description: v.description, templateId: v.templateId, baseId, optionId: v.optionId, sort: +v.sort || 0 })
+      await questApi.adminSaveQuest(code, { id: q?.id, title: v.title, description: v.description, templateId: v.templateId, baseId, optionId: v.optionId, sort: +v.sort || 0, kind: v.kind || 'plan' })
       toast(q ? '챌린지를 저장했어요.' : '챌린지를 만들었어요.'); if (!q) { form.reset(); setBaseId('') }
       onDone()
     } catch (err) { toast(explain(err)) }
@@ -221,7 +222,11 @@ function QuestForm({ q, code, baseCats, plansList, onDone, toast }) {
       </div>
       <textarea className="inp" name="description" rows={2} defaultValue={q?.description || ''} placeholder="간단한 설명 (챌린지 화면 맨 위에 보여요)" aria-label="설명" />
       <div className="addf">
-        <select className="inp" name="templateId" defaultValue={q?.templateId || ''} aria-label="플랜 템플릿" style={{ maxWidth: 'none' }}>
+        <select className="inp" name="kind" defaultValue={q?.kind || 'plan'} aria-label="챌린지 종류" style={{ maxWidth: 'none' }}>
+          <option value="plan">종류: 플랜</option>
+          <option value="miracle">종류: 미라클모닝</option>
+        </select>
+        <select className="inp" name="templateId" defaultValue={q?.templateId || ''} aria-label="플랜 템플릿 (플랜 종류만)" style={{ maxWidth: 'none' }}>
           <option value="">플랜 템플릿 고르기</option>
           {plansList.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
         </select>
@@ -254,7 +259,7 @@ function AdminQuests({ code, baseCats, toast, refresh }) {
     <>
       <Fold head={<><span>챌린지</span><Help>플랜 템플릿을 여러 사람이 함께 하는 챌린지예요. 연결한 추천 활동(예: 언어 → 일본어) 옆에 보이고, 참여하면 그 활동이 참여자 활동에 담겨요.</Help></>}>
       {!list ? <p className="empty">불러오는 중…</p> : <div className="stack" style={{ gap: 10 }}>
-        {list.map(q => <QuestForm key={q.id + q.title + q.templateId + q.baseId + q.optionId + q.sort + q.description} q={q} code={code} baseCats={baseCats} plansList={plansList} onDone={done} toast={toast} />)}
+        {list.map(q => <QuestForm key={q.id + q.title + q.templateId + q.baseId + q.optionId + q.sort + q.description + q.kind} q={q} code={code} baseCats={baseCats} plansList={plansList} onDone={done} toast={toast} />)}
         <QuestForm code={code} baseCats={baseCats} plansList={plansList} onDone={done} toast={toast} />
       </div>}
     </Fold>
@@ -414,6 +419,19 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
       }) : <span className="sub">계정이 없어요.</span>}
     </div>
 
+    </Fold>
+    <Fold head={<><span>미라클모닝 캐릭터</span><Help>미라클모닝 위클리 캘린더에 쓰는 얼굴이에요. 기본(오늘 아직 기록 전)·성공·애매·실패 네 가지. 배경은 자동으로 지워요.</Help></>}>
+    <div className="row">{[['default', '기본'], ['ok', '성공'], ['meh', '애매'], ['fail', '실패']].map(([k, l]) => {
+      const mm = site.miracle || {}
+      return (
+        <span key={k} className="mface-adm">
+          <span className="checker">{mm[k] ? <img src={mm[k]} alt="" /> : <span>{({ default: '🙂', ok: '😆', meh: '😐', fail: '😵' })[k]}</span>}</span>
+          <b>{l}</b>
+          <label className="btn sm">올리기<input type="file" accept="image/*" hidden onChange={file(async f => save('miracle', { ...mm, [k]: await makeIcon(f, { cutout: cut }) }, `${l} 얼굴을 바꿨어요.`))} /></label>
+          {mm[k] && <button className="x" onClick={() => save('miracle', { ...mm, [k]: '' })}>빼기</button>}
+        </span>
+      )
+    })}</div>
     </Fold>
     <Fold head={<><span>커서</span><Help>.cur 파일은 그대로(클릭 지점 포함) 쓰고, 일반 이미지는 배경을 지우고 40px 로 줄여요. 올린 커서는 모두가 화면 설정에서 골라 쓸 수 있어요. 움직이는 커서(.ani)는 브라우저가 지원하지 않아요.</Help></>}>
     <div className="set-row">

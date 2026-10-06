@@ -198,6 +198,10 @@ try {
   const hackQ = await B.sb.from('gs_quest_members').update({ progress: {} }).eq('quest_id', qid.data).eq('user_id', A.id).select()
   ok(!hackQ.data?.length, 'B 는 A 의 진도를 못 고침')
   ok(!!(await B.sb.from('gs_quest_members').insert({ quest_id: qid.data, user_id: A.id })).error, 'B 가 A 이름으로 참여 못 함')
+  const mq = await adm('gs_admin_quest_save', { p_id: '', p_title: 'M챌린지' + tag, p_description: '', p_template_id: '', p_base_id: '', p_option_id: '', p_sort: 98, p_kind: 'miracle' })
+  ok(!mq.error && (await A.sb.from('gs_quests').select('kind').eq('id', mq.data).single()).data?.kind === 'miracle', '미라클모닝 종류 챌린지 생성')
+  ok(!(await A.sb.from('gs_quest_members').insert({ quest_id: mq.data, user_id: A.id, progress: { goal: { bed: '23:00', wake: '06:00' }, logs: {} } })).error, '목표 시간과 함께 참여')
+  await adm('gs_admin_quest_delete', { p_id: mq.data })
   ok(!(await adm('gs_admin_quest_delete', { p_id: qid.data })).error, '관리자가 챌린지 삭제 (참여 기록도 함께)')
 
   console.log('메모·낙서')

@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore'
 import { CatGlyph, ConfirmX, Help, avaOf, nickOf, withImage } from './common'
 import Md from './Md'
 import PlanViewer, { normalize } from './PlanViewer'
+import MiracleBoard, { GoalForm } from './MiracleBoard'
 
 /* 챌린지 화면: 참여한 사람, 간단한 설명, 개요(템플릿 개요), 참여/나가기, 참여자는 플랜 열기.
    플랜 진도는 gs_quest_members.progress 에 저장되고 참여자끼리 '모두' 탭에서 서로 본다. */
@@ -45,7 +46,8 @@ export function PlanScreen({ id, back }) {
       </div>
       <div className="plan-body">
         {!q ? <p className="empty">챌린지를 찾지 못했어요.</p>
-          : !mine ? <div className="sheet"><p className="empty">참여한 사람만 플랜을 열 수 있어요.</p><div className="row"><button className="btn pri" onClick={() => act.joinQuest(q)}>참여하기</button></div></div>
+          : !mine ? <div className="sheet"><p className="empty">참여한 사람만 열 수 있어요.</p><div className="row"><button className="btn" onClick={back}>챌린지 화면으로</button></div></div>
+          : q.kind === 'miracle' ? <MiracleBoard q={q} />
           : !tpl ? <p className="empty">플랜을 불러오는 중…</p>
           : <PlanViewer tpl={tpl} progress={mine.progress} setProgress={v => act.setQuestProgress(q, v)} people={people} />}
       </div>
@@ -57,6 +59,7 @@ export default function QuestPage({ id, back }) {
   const { S, act } = useStore()
   const q = S.quests.find(x => x.id === id)
   const tpl = useQuestTemplate(q)
+  const [goal, setGoal] = useState(false)  // 미라클모닝: 참여 전 목표 시간 정하기
 
   if (!q) return <div className="sheet"><p className="empty">챌린지를 찾지 못했어요.</p><div className="row"><button className="btn" onClick={back}>‹ 돌아가기</button></div></div>
   const cat = questCat(q, S.baseCats)
@@ -75,10 +78,10 @@ export default function QuestPage({ id, back }) {
           </div>
           {mine
             ? <div className="row">
-                <button className="btn pri" onClick={() => openPlan(q.id)}>📖 플랜 열기</button>
+                <button className="btn pri" onClick={() => openPlan(q.id)}>{q.kind === 'miracle' ? '📅 위클리 열기' : '📖 플랜 열기'}</button>
                 <ConfirmX onConfirm={() => act.leaveQuest(q)} label="나가기" className="btn sm" />
               </div>
-            : <button className="btn pri" onClick={() => act.joinQuest(q)}>참여하기</button>}
+            : <button className="btn pri" onClick={() => q.kind === 'miracle' ? setGoal(true) : act.joinQuest(q)}>참여하기</button>}
         </div>
         {q.description && <p className="plan-text">{q.description}</p>}
       </section>
@@ -89,7 +92,9 @@ export default function QuestPage({ id, back }) {
           : <p className="empty">아직 참여한 사람이 없어요. 첫 번째로 참여해 보세요!</p>}
       </section>
 
-      {tpl && (
+      {goal && <GoalForm onClose={() => setGoal(false)} onSave={g => { act.joinQuest(q, { goal: g, logs: {} }); setGoal(false); openPlan(q.id) }} />}
+
+      {tpl && q.kind !== 'miracle' && (
         <section className="sheet">
           <h2><span>개요</span></h2>
           {tpl.intro.filter(s => s.title !== '처음 열 파일').map(s => (

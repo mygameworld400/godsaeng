@@ -506,6 +506,27 @@ html[data-cursor] :is(textarea,input:not([type=checkbox]):not([type=radio]):not(
 .edit-dot{position:absolute;bottom:-8px;right:-8px;padding:0 5px;font-size:12px;background:var(--paper)}
 .editor-stage{display:grid;place-items:center;padding:10px;border-radius:12px;background:repeating-conic-gradient(var(--soft) 0 25%,var(--paper) 0 50%) 0 0/14px 14px;max-height:60vh;overflow:auto}
 .editor-canvas{image-rendering:pixelated;cursor:crosshair;touch-action:none;max-width:100%}
+.face{display:inline-grid;place-items:center;border-radius:50%;overflow:hidden;background:var(--paper);border:1.5px solid var(--line);line-height:1;flex:none}
+.face img{width:100%;height:100%;object-fit:cover}
+.goal-row{display:flex;gap:16px;flex-wrap:wrap}
+.goal-row label{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.mweek{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+@media (max-width:640px){.mweek{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.mday{border:1.5px solid var(--line);border-radius:12px;background:var(--paper);min-height:150px;padding:6px;display:flex;flex-direction:column;gap:6px}
+.mday.today{border-color:var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.mday.future{opacity:.55}
+.mday-h{font-size:13px;color:var(--muted);text-align:center}
+.mday-h b{color:var(--ink);font-family:var(--f-display);font-weight:400;font-size:17px;margin-left:2px}
+.mfaces{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.mface{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;color:inherit;width:52px}
+.mface:not(:disabled){cursor:pointer}
+.mface small{font-size:11px;max-width:52px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mface.me .face{border-color:var(--ink);box-shadow:0 0 0 2px var(--hl)}
+.mface.add .face{width:40px;height:40px;font-size:20px;color:var(--muted);border-style:dashed}
+.mres{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 10px;border-radius:12px;border:1.5px solid transparent}
+.mres:has(input:checked){border-color:var(--ink);background:var(--hl)}
+.mres input{position:absolute;opacity:0;pointer-events:none}
+.mface-adm{display:flex;flex-direction:column;align-items:center;gap:4px}
 .recs{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mitem{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;border-radius:12px;padding:4px 2px;border:1.5px dashed var(--line)}
 .mitem.dragging{opacity:.4}

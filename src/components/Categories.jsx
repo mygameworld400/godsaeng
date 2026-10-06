@@ -174,11 +174,11 @@ function CatPage({ id }) {
               <div key={q.id} className="mode-btn mode-box" role="button" tabIndex={0} onClick={() => goCat('q:' + q.id)} onKeyDown={e => { if (e.key === 'Enter') goCat('q:' + q.id) }}>
                 <span>🏆 <b>챌린지</b></span>
                 <small>{q.title}{joined ? ' · 참여 중' : ''}</small>
-                {joined && <button className="btn pri sm" onClick={e => { e.stopPropagation(); goCat('plan:' + q.id) }}>📖 플랜 열기</button>}
+                {joined && <button className="btn pri sm" onClick={e => { e.stopPropagation(); goCat('plan:' + q.id) }}>{q.kind === 'miracle' ? '📅 위클리 열기' : '📖 플랜 열기'}</button>}
               </div>
             )
           })}
-          <button className="mode-btn" onClick={() => setHelper(true)}>📘 <b>개인공부 도우미</b><small>나만의 공부 계획</small></button>
+          {kind !== 'miracle' && <button className="mode-btn" onClick={() => setHelper(true)}>📘 <b>개인공부 도우미</b><small>나만의 공부 계획</small></button>}
         </div>
       )}
       {helper && <Modal title="개인공부 도우미" onClose={() => setHelper(false)}><p className="empty">준비 중이에요. 곧 만나요!</p></Modal>}
@@ -215,7 +215,7 @@ function CatPage({ id }) {
         )}
       </section>
 
-      {isLedger ? <Ledger cat={cat} /> : <>
+      {kind === 'miracle' ? null : isLedger ? <Ledger cat={cat} /> : <>
       <div className="cols">
         <section className="sheet">
           <h2><span>시작 날짜</span></h2>
