@@ -9,3 +9,8 @@ export async function adminListPlans(code) {
 export async function adminGetPlan(code, id) {
   return unwrap(await supabase.rpc('gs_admin_plan_get', { p_code: code, p_id: id }))
 }
+
+/** 템플릿 전체 저장 (테스트 모드 편집) */
+export async function adminSavePlan(code, id, data) {
+  unwrap(await supabase.rpc('gs_admin_plan_save', { p_code: code, p_id: id, p_title: data.title, p_summary: data.summary || '', p_data: data }))
+}

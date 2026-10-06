@@ -176,7 +176,8 @@ function PlanTest({ code, toast }) {
             <span>🧪 테스트 모드예요. 내 활동에 저장되지 않고, 진도·점수는 이 브라우저에만 남아요.</span>
             <ConfirmX onConfirm={() => save({})} label="진도 초기화" className="btn sm" />
           </div>
-          <PlanViewer tpl={open.tpl} progress={pg} setProgress={save} />
+          <PlanViewer tpl={open.tpl} progress={pg} setProgress={save}
+            onSave={async data => { try { await plans.adminSavePlan(code, open.id, data); setOpen({ ...open, tpl: data }); toast('템플릿을 저장했어요.') } catch (e) { toast(explain(e)); throw e } }} />
         </Modal>
       )}
     </>
