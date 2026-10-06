@@ -4,7 +4,7 @@ import * as admin from '../services/adminService'
 import * as categories from '../services/categoryService'
 import * as plans from '../services/planService'
 import PlanViewer from './PlanViewer'
-import { COLORS, ConfirmX, Help, Modal, formVals } from './common'
+import { COLORS, ConfirmX, Help, Modal, avaOf, formVals } from './common'
 import { makeIcon } from '../lib/cutout'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
@@ -153,6 +153,7 @@ const readTest = id => { try { return JSON.parse(localStorage.getItem(testKey(id
 const writeTest = (id, v) => { try { localStorage.setItem(testKey(id), JSON.stringify(v)) } catch { /* 저장 못 해도 화면은 동작 */ } }
 
 function PlanTest({ code, toast }) {
+  const { S } = useStore()
   const [list, setList] = useState(null)
   const [open, setOpen] = useState(null)       // { id, tpl }
   const [pg, setPg] = useState({})
@@ -177,6 +178,7 @@ function PlanTest({ code, toast }) {
             <ConfirmX onConfirm={() => save({})} label="진도 초기화" className="btn sm" />
           </div>
           <PlanViewer tpl={open.tpl} progress={pg} setProgress={save}
+            people={[{ id: 'test', nick: (S.me?.nick || '나') + ' (테스트)', ava: S.me ? avaOf(S, S.uid) : '🧪', progress: pg }]}
             onSave={async data => { try { await plans.adminSavePlan(code, open.id, data); setOpen({ ...open, tpl: data }); toast('템플릿을 저장했어요.') } catch (e) { toast(explain(e)); throw e } }} />
         </Modal>
       )}
