@@ -182,6 +182,11 @@ try {
   ok(!!(await B.sb.from('gs_events').insert({ user_id: A.id, title: '사칭', start_date: today })).error, 'B 는 A 일정에 못 끼워 넣음')
   ok(!(await A.sb.from('gs_events').update({ title: '여름휴가' }).eq('id', ev.data?.id)).error, 'A 일정 수정')
   ok(!(await A.sb.from('gs_events').delete().eq('id', ev.data?.id)).error, 'A 일정 삭제')
+  ok(!(await A.sb.from('gs_events').insert({ user_id: A.id, title: '언젠가', start_date: null })).error, '날짜 없는 일정 추가')
+  ok(!!(await A.sb.from('gs_events').insert({ user_id: A.id, title: '이상함', start_date: null, end_date: today })).error, '날짜 없는 일정에 끝 날짜만 있으면 거절')
+  ok(!(await A.sb.from('gs_events').update({ hidden: true }).eq('user_id', A.id).eq('title', '치과')).error, '일정 달력에서 숨기기')
+  ok(!(await A.sb.from('gs_private').update({ diary_cover: { color: '#7A5AE0', shape: 'heart', title: '갓생' } }).eq('user_id', A.id)).error, '다이어리 표지 저장')
+  ok((await B.sb.from('gs_private').select('diary_cover').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 다이어리 표지를 못 봄')
 
   console.log('외부인')
   const anon = await client().from('gs_days').select('*')

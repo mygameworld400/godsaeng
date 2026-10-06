@@ -4,6 +4,7 @@ import { today, pretty } from '../lib/date'
 import { stat, pc } from '../lib/stats'
 import { MOODS, ConfirmX, CatIcon, CatSelect, Groups, PubToggle, formVals, withImage, Help } from './common'
 import Calendar from './Calendar'
+import DiaryBook from './DiaryBook'
 
 /* 루틴·투두 한 줄. ✎ 로 내용·활동 수정, ⋮⋮ 손잡이를 끌어 순서 바꾸기 (브라우저 기본 드래그, 라이브러리 없음). */
 function ItemRow({ it, cats, editing, onEdit, onSave, onToggle, onPub, del, drag }) {
@@ -44,6 +45,7 @@ export default function Today() {
   const { S, act } = useStore()
   const [filter, setFilter] = useState('')  // '' 전체 / 'none' 미분류 / 활동 id
   const [editing, setEditing] = useState(null)  // 수정 중인 루틴·투두 id
+  const [book, setBook] = useState(false)       // 다이어리 책 팝업
   const rDrag = useDrag(act.moveRoutine), tDrag = useDrag(act.moveTodo)
   const me = S.me, d = act.myDay(S.date), isToday = S.date === today(), st = stat(me, d, true)
   const routines = me.routines.map(r => ({ ...r, _done: !!d.checks[r.id] }))
@@ -113,7 +115,8 @@ export default function Today() {
 
       <section className="sheet">
         <div className="row between">
-          <h2><span>하루 마무리 일기</span></h2>
+          <h2><button className="linkh" onClick={() => setBook(true)} title="다이어리 펼치기"><span>다이어리</span> 📔</button>
+            <Help>오늘 쓴 일기는 다이어리 책에 자동으로 들어가요. 제목을 누르면 다이어리가 펼쳐져요.</Help></h2>
           <div className="moods" role="group" aria-label="오늘 기분">
             {MOODS.map(m => <button key={m} className="mood" aria-pressed={d.mood === m} onClick={() => act.setMood(m)}>{m}</button>)}
           </div>
@@ -123,6 +126,7 @@ export default function Today() {
         <label className="toggle"><input type="checkbox" checked={d.pub} onChange={e => act.setPub(e.target.checked)} /> 이 일기를 내 미니홈피에 공개하기
           <Help>체크하면 친구들이 내 미니홈피에서 이 일기를 읽을 수 있어요. 체크하지 않으면 나만 볼 수 있어요.</Help></label>
       </section>
+      {book && <DiaryBook onClose={() => setBook(false)} />}
     </div>
   )
 }

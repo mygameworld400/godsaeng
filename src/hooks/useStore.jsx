@@ -67,6 +67,7 @@ export function StoreProvider({ children }) {
     S.people = p
     S.me = p[uid] ? { ...structuredClone(p[uid]), routines: priv?.routines ?? p[uid].routines } : null
     S.catDetails = priv?.catDetails || {}
+    S.diaryCover = priv?.diaryCover  // undefined 면 표지 칸(013) 없음 → 저장 안 함
     S.days = d; S.diary = di; S.ch = ch; S.baseCats = base; S.months = {}; S.events = {}
     syncBaseCats()
     await loadFriendDays()
@@ -111,7 +112,7 @@ export function StoreProvider({ children }) {
       const ok = session?.user?.email?.endsWith('@godsaeng.local')
       const uid = ok ? session.user.id : null
       if (uid === S.uid) { bump(); return }
-      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {} })
+      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {}, undatedLoaded: false, allDiaries: false, diaryCover: undefined })
       bump()
       if (uid) loadAll().catch(e => { S.loaded = true; onErr(e) })
     }
@@ -128,7 +129,7 @@ export function StoreProvider({ children }) {
   /* ---------- 저장 헬퍼 ---------- */
   const saveMe = () => {
     S.people[S.uid] = structuredClone(S.me)
-    later('me', () => profiles.saveProfile(S.uid, S.me, S.catDetails))
+    later('me', () => profiles.saveProfile(S.uid, S.me, S.catDetails, S.diaryCover))
   }
   const myDay = date => S.days[date] || (S.days[date] = normDay({}, date))
   const saveDay = date => {
@@ -208,25 +209,31 @@ export function StoreProvider({ children }) {
       if (S.local || S.months[ym]) return
       S.months[ym] = true
       const [y, m] = ym.split('-').map(Number), from = ym + '-01', to = ym + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0')
-      Promise.all([days.listMyDays(S.uid, from, to), events.listEvents(S.uid, from, to)]).then(([got, evs]) => {
+      const undated = S.undatedLoaded ? Promise.resolve([]) : events.listUndated(S.uid).catch(() => [])
+      S.undatedLoaded = true
+      Promise.all([days.listMyDays(S.uid, from, to), events.listEvents(S.uid, from, to), undated]).then(([got, evs, und]) => {
         for (const k in got) if (!S.days[k]) S.days[k] = got[k]
-        evs.forEach(e => { S.events[e.id] = e })
+        evs.concat(und).forEach(e => { S.events[e.id] = e })
         bump()
       }).catch(e => { delete S.months[ym]; onErr(e) })
     },
 
     /* ---------- 일정 ---------- */
+    // start 가 없으면 날짜 없는 일정
     addEvent(e) {
-      const ev = { id: crypto.randomUUID(), color: 'c4', ...e, end: e.end && e.end >= e.start ? e.end : e.start }
+      const ev = { id: crypto.randomUUID(), color: 'c4', ...e, start: e.start || null, end: e.start ? (e.end && e.end >= e.start ? e.end : e.start) : null }
       S.events[ev.id] = ev; bump()
       now(() => events.addEvent(S.uid, ev))
     },
     updateEvent(id, patch) {
       const ev = S.events[id]; if (!ev) return
-      Object.assign(ev, patch); if (!ev.end || ev.end < ev.start) ev.end = ev.start
+      Object.assign(ev, patch)
+      if (!ev.start) { ev.start = null; ev.end = null } else if (!ev.end || ev.end < ev.start) ev.end = ev.start
       bump(); now(() => events.updateEvent(id, ev))
     },
     delEvent(id) { delete S.events[id]; bump(); now(() => events.removeEvent(id)) },
+    /** 달력 칸에 보이기/숨기기 */
+    toggleEventShown(id) { const ev = S.events[id]; if (ev) act.updateEvent(id, { hidden: !ev.hidden }) },
     toggleRoutine(id, on) { const d = myDay(S.date); if (on) d.checks[id] = true; else delete d.checks[id]; saveDay(S.date); bump() },
     addTodo(text, cat) { myDay(S.date).todos.push({ id: rid(), text, cat, done: false, pub: false }); saveDay(S.date); bump() },
     editTodo(id, patch) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) { Object.assign(t, patch); saveDay(S.date); bump() } },
@@ -236,6 +243,21 @@ export function StoreProvider({ children }) {
     delTodo(id) { const d = myDay(S.date); d.todos = d.todos.filter(t => t.id !== id); saveDay(S.date); bump() },
     setMood(m) { const d = myDay(S.date); d.mood = d.mood === m ? '' : m; saveDay(S.date); bump() },
     setPub(on) { myDay(S.date).pub = on; saveDay(S.date); bump() },
+    /* ---------- 다이어리 책 ---------- */
+    setDiaryAt(date, text) {
+      S.diary[date] = text
+      later('diary:' + date, () => days.saveDiary(S.uid, date, text))
+      if (myDay(date).pub) saveDay(date)
+      bump()
+    },
+    /** 다이어리 책을 펼칠 때 전체 일기를 불러온다 (평소엔 최근 45일만). 수정 중인 날은 덮지 않는다. */
+    async loadAllDiaries() {
+      if (S.local || S.allDiaries) return
+      const all = await days.listDiaries(S.uid, '1900-01-01')
+      for (const k in all) if (!(k in S.diary)) S.diary[k] = all[k]
+      S.allDiaries = true; bump()
+    },
+    setDiaryCover(patch) { S.diaryCover = { ...S.diaryCover, ...patch }; saveMe(); bump() },
     setDiary(text) {
       const date = S.date
       S.diary[date] = text

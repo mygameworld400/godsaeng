@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { stat } from '../lib/stats'
+import { today } from '../lib/date'
 import { ConfirmX, Help, Modal, avaOf, nickOf } from './common'
 import Hompy from './Hompy'
 
@@ -33,6 +34,10 @@ export default function Friends() {
         <h2><span>친구 목록</span><Help>내가 추가한 친구들이에요. 오른쪽 숫자는 친구의 오늘 달성률이에요. ＋ 를 누르면 친구를 찾아 추가할 수 있어요.</Help>
           <button className="plus" aria-label="친구 찾기" title="친구 찾기" onClick={() => setFinding(true)}>＋</button></h2>
         <div>
+          {person(S.uid, <>
+            <span className="pct">{stat(S.me, S.days[today()], true).pct}%</span>
+            <span className="pill">나</span>
+          </>)}
           {mineF.length ? mineF.map(id => {
             const s = stat(S.people[id], S.fday[id], false)
             return person(id, <>
