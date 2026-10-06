@@ -15,7 +15,6 @@ const fmt = s => localDateTime(s) || '-'
 function AccountRow({ a, code, onDone, toast }) {
   const [edit, setEdit] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [opts, setOpts] = useState(c?.options || [])
   const save = async e => {
     const v = formVals(e)
     setBusy(true)
@@ -82,6 +81,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
   const [preview, setPreview] = useState('')   // 새로 만든 이미지 data URL
   const [clear, setClear] = useState(false)    // 기존 이미지 지우기
   const [busy, setBusy] = useState(false)
+  const [opts, setOpts] = useState(c?.options || [])  // 하위 선택지
 
   // 파일·누끼 옵션이 바뀌면 미리보기를 다시 만든다
   useEffect(() => {

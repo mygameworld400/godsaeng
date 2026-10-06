@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
-import { today } from '../lib/date'
 import { stat } from '../lib/stats'
 import { CatGlyph, ConfirmX, Help, Modal, avaOf, nickOf, withImage } from './common'
 import Hompy from './Hompy'
@@ -14,7 +13,6 @@ export default function Friends() {
   const others = Object.keys(S.people).filter(id => id !== S.uid)
   const addedMe = others.filter(id => (S.people[id].friends || []).includes(S.uid) && !S.me.friends.includes(id))
   const rest = others.filter(id => !S.me.friends.includes(id) && !addedMe.includes(id))
-  const t = today()
 
   const openHompy = id => { act.view(id); setPopup(id) }
   const closeHompy = () => { setPopup(null); act.view(S.uid) }
