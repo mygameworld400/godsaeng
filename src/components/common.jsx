@@ -3,6 +3,19 @@ import { catOf } from '../lib/stats'
 
 export const AVA = ['🐣', '🐻', '🐰', '🦊', '🐱', '🐶', '🐼', '🐸', '🦄', '🐧', '🌱', '🔥']
 export const MOODS = ['😆', '🙂', '😐', '😮‍💨', '😭']
+export const CAT_ICONS = ['🏃', '📚', '🏠', '💪', '🧘', '🍎', '💧', '💰', '🎨', '🎸', '✍️', '💻', '🌱', '🧹', '😴', '🎯', '📖', '🗣️', '✈️', '🏷️']
+export const COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
+export const catIcon = c => c?.icon || '🏷️'
+
+/** 동그란 카테고리 아이콘 + 이름. dim 이면 아직 추가 안 한 기본 카테고리. */
+export function CatIcon({ cat, on, dim, badge, onClick, label }) {
+  return (
+    <button type="button" className={'cicon' + (on ? ' on' : '') + (dim ? ' dim' : '')} onClick={onClick} aria-pressed={on}>
+      <span className="cicon-c" style={{ borderColor: cat.color ? `var(--${cat.color})` : 'var(--line)' }}>{catIcon(cat)}{badge && <i className="cicon-b">{badge}</i>}</span>
+      <span className="cicon-t">{label ?? cat.name}</span>
+    </button>
+  )
+}
 
 export const nickOf = (S, id) => id === S.uid ? S.me?.nick || '나' : S.people[id]?.nick || '아직 가입 전인 친구'
 export const avaOf = (S, id) => (id === S.uid ? S.me?.emoji : S.people[id]?.emoji) || '🙂'

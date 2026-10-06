@@ -7,6 +7,7 @@ import * as profiles from '../services/profileService'
 import * as days from '../services/dayService'
 import * as cheers from '../services/cheerService'
 import * as bets from '../services/betService'
+import * as categories from '../services/categoryService'
 
 /* 전역 상태는 이 파일 하나에 모은다. 컴포넌트는 Supabase 를 직접 부르지 않는다.
    상태는 ref 하나에 두고 변경 후 bump() 로 다시 그린다 (원본 아티팩트 구조를 그대로 옮김).
@@ -18,7 +19,7 @@ export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {},
+  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {},
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -48,12 +49,14 @@ export function StoreProvider({ children }) {
 
   async function loadAll() {
     const uid = S.uid, since = addDays(today(), -45)
-    const [p, routines, d, di, ch] = await Promise.all([
-      profiles.listProfiles(), profiles.myRoutines(uid), days.listMyDays(uid, since), days.listDiaries(uid, since), bets.listBets(),
+    const [p, priv, d, di, ch, base] = await Promise.all([
+      profiles.listProfiles(), profiles.myPrivate(uid), days.listMyDays(uid, since), days.listDiaries(uid, since), bets.listBets(),
+      categories.listBaseCats(),
     ])
     S.people = p
-    S.me = p[uid] ? { ...structuredClone(p[uid]), routines: routines ?? p[uid].routines } : null
-    S.days = d; S.diary = di; S.ch = ch
+    S.me = p[uid] ? { ...structuredClone(p[uid]), routines: priv?.routines ?? p[uid].routines } : null
+    S.catDetails = priv?.catDetails || {}
+    S.days = d; S.diary = di; S.ch = ch; S.baseCats = base; S.months = {}
     await loadFriendDays()
     if (S.me && !S.view) await setView(uid)
     S.loaded = true; bump()
@@ -70,7 +73,7 @@ export function StoreProvider({ children }) {
       S.session = session; S.ready = true
       const uid = session?.user?.id || null
       if (uid === S.uid) { bump(); return }
-      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {} })
+      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {} })
       bump()
       if (uid) loadAll().catch(e => { S.loaded = true; onErr(e) })
     }
@@ -83,7 +86,7 @@ export function StoreProvider({ children }) {
   /* ---------- 저장 헬퍼 ---------- */
   const saveMe = () => {
     S.people[S.uid] = structuredClone(S.me)
-    later('me', () => profiles.saveProfile(S.uid, S.me))
+    later('me', () => profiles.saveProfile(S.uid, S.me, S.catDetails))
   }
   const myDay = date => S.days[date] || (S.days[date] = normDay({}, date))
   const saveDay = date => {
@@ -109,24 +112,56 @@ export function StoreProvider({ children }) {
     myDay,
 
     join(nick, emoji) {
-      S.me = { id: S.uid, nick, emoji, bio: '', friends: [], routines: [],
-        cats: [{ id: rid(), name: '운동', color: 'c3' }, { id: rid(), name: '공부', color: 'c4' }, { id: rid(), name: '생활', color: 'c2' }] }
+      S.me = { id: S.uid, nick, emoji, bio: '', friends: [], routines: [], cats: [] }
       S.people[S.uid] = structuredClone(S.me)
       now(async () => { await profiles.saveProfile(S.uid, S.me); await loadAll() })
       setView(S.uid).catch(onErr)
     },
     saveProfile(patch) { Object.assign(S.me, patch); saveMe(); bump() },
 
-    addCat(name) {
-      if (S.me.cats.length >= 12) return toast('카테고리는 12개까지 만들 수 있어요.')
-      S.me.cats.push({ id: rid(), name, color: 'c' + (S.me.cats.length % 6 + 1) }); saveMe(); bump()
+    /* ---------- 카테고리 ---------- */
+    // 기본 카테고리를 내 카테고리로 복사한다. base 로 원본을 기억해 '추가됨' 표시에 쓴다.
+    addBaseCat(b) {
+      if (S.me.cats.length >= 20) return toast('카테고리는 20개까지 만들 수 있어요.')
+      if (S.me.cats.some(c => c.base === b.id)) return
+      const id = rid()
+      S.me.cats.push({ id, name: b.name, icon: b.icon, color: b.color, base: b.id })
+      S.catDetails[id] = { start: today(), goal: '', todos: [] }
+      saveMe(); bump()
+      return id
     },
-    delCat(id) { S.me.cats = S.me.cats.filter(c => c.id !== id); saveMe(); bump() },
+    addCat(name, icon) {
+      if (S.me.cats.length >= 20) return toast('카테고리는 20개까지 만들 수 있어요.')
+      const id = rid()
+      S.me.cats.push({ id, name, icon: icon || '🏷️', color: 'c' + (S.me.cats.length % 6 + 1) })
+      S.catDetails[id] = { start: today(), goal: '', todos: [] }
+      saveMe(); bump()
+      return id
+    },
+    updateCat(id, patch) { const c = S.me.cats.find(x => x.id === id); if (c) { Object.assign(c, patch); saveMe(); bump() } },
+    delCat(id) { S.me.cats = S.me.cats.filter(c => c.id !== id); delete S.catDetails[id]; saveMe(); bump() },
+    catDetail: id => S.catDetails[id] || (S.catDetails[id] = { start: '', goal: '', todos: [] }),
+    setCatDetail(id, patch) { Object.assign(act.catDetail(id), patch); saveMe(); bump() },
+    addCatTodo(id, text) { act.catDetail(id).todos.push({ id: rid(), text, done: false }); saveMe(); bump() },
+    toggleCatTodo(id, tid) { const t = act.catDetail(id).todos.find(x => x.id === tid); if (t) { t.done = !t.done; saveMe(); bump() } },
+    delCatTodo(id, tid) { const d = act.catDetail(id); d.todos = d.todos.filter(x => x.id !== tid); saveMe(); bump() },
+
     addRoutine(text, cat) { S.me.routines.push({ id: rid(), text, cat, pub: false }); saveMe(); saveDay(today()); bump() },
     togglePubRoutine(id) { const r = S.me.routines.find(x => x.id === id); if (r) { r.pub = !r.pub; saveMe(); saveDay(today()); bump() } },
     delRoutine(id) { S.me.routines = S.me.routines.filter(r => r.id !== id); saveMe(); saveDay(today()); bump() },
 
     setDate(n) { S.date = n ? addDays(S.date, n) : today(); bump() },
+    setDateTo(d) { S.date = d; bump() },
+    /** 캘린더에서 보는 달('YYYY-MM')의 내 기록을 불러온다. 이미 있는 날(수정 중일 수 있음)은 덮지 않는다. */
+    loadMonth(ym) {
+      if (S.local || S.months[ym]) return
+      S.months[ym] = true
+      const [y, m] = ym.split('-').map(Number), last = new Date(y, m, 0).getDate()
+      days.listMyDays(S.uid, ym + '-01', ym + '-' + String(last).padStart(2, '0')).then(got => {
+        for (const k in got) if (!S.days[k]) S.days[k] = got[k]
+        bump()
+      }).catch(e => { delete S.months[ym]; onErr(e) })
+    },
     toggleRoutine(id, on) { const d = myDay(S.date); if (on) d.checks[id] = true; else delete d.checks[id]; saveDay(S.date); bump() },
     addTodo(text, cat) { myDay(S.date).todos.push({ id: rid(), text, cat, done: false, pub: false }); saveDay(S.date); bump() },
     togglePubTodo(id) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) { t.pub = !t.pub; saveDay(S.date); bump() } },

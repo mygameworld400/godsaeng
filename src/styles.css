@@ -140,5 +140,34 @@ select.inp{width:auto;max-width:130px}
 .acct .person{border-bottom:0}
 .addf.col label{display:flex;flex-direction:column;gap:4px;font-size:14px}
 .emo{display:flex;flex-wrap:wrap;gap:4px}
+
+/* 카테고리 아이콘 */
+.icons{display:flex;flex-wrap:wrap;gap:12px 10px}
+.cicon{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;padding:0;width:64px;color:inherit}
+.cicon-c{position:relative;width:52px;height:52px;border-radius:50%;border:2.5px solid var(--line);background:var(--paper);display:grid;place-content:center;font-size:24px;box-shadow:2px 2px 0 var(--ink)}
+.cicon.on .cicon-c{background:var(--hl);border-color:var(--ink)!important}
+.cicon.dim .cicon-c{opacity:.45;box-shadow:none;border-style:dashed}
+.cicon-b{position:absolute;right:-4px;bottom:-4px;background:var(--accent);color:var(--on-accent);border-radius:999px;font-style:normal;font-size:12px;line-height:1;padding:3px 5px;border:1.5px solid var(--paper)}
+.cicon-t{font-size:12.5px;line-height:1.2;text-align:center;max-width:64px;overflow-wrap:anywhere}
+.basecat{align-items:center}
+.basecat .cicon{width:52px}
+.linkh{border:0;background:none;padding:0;color:inherit;font:inherit;cursor:pointer}
+.linkh:hover span{text-decoration:underline}
+
+/* 캘린더 */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .wd{text-align:center;font-size:12px;color:var(--muted);padding-bottom:2px}
+.cal .wd.sun,.cal .d.sun .n{color:var(--bad)}
+.cal .d{border:1.5px solid var(--line);background:var(--paper);border-radius:10px;min-height:52px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;font-variant-numeric:tabular-nums}
+.cal .d .n{font-size:13px}
+.cal .d .p{font-size:11px;color:var(--muted)}
+.cal .d .gauge{width:70%;height:5px;border-radius:999px;background:var(--soft);overflow:hidden;display:block}
+.cal .d .gauge i{display:block;height:100%;background:var(--hl);border:0;border-radius:0;min-height:0;max-width:none}
+.cal .d.out{visibility:hidden}
+.cal .d.today{border-color:var(--ink)}
+.cal .d.sel{background:var(--hl);color:var(--on-hl);border-color:var(--ink)}
+.cal .d.sel .p{color:var(--on-hl)}
+.cal .d.sel .gauge{background:var(--paper)}
+.cal .d.sel .gauge i{background:var(--ink)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:999px;padding:8px 18px;font-size:14px;max-width:calc(100% - 32px)}
 @media (max-width:480px){.brand{font-size:28px}.sheet{padding:14px}.ring{width:108px;height:108px}}

@@ -7,17 +7,18 @@ const toApp = r => normDay({
 }, r.date)
 
 /** 공개 기록 (친구도 보는 것: 공개 항목 + 개수) */
-export async function listDays(uid, since) {
-  const rows = unwrap(await supabase.from('gs_days').select('*').eq('user_id', uid).gte('date', since))
+export async function listDays(uid, since, until) {
+  let q = supabase.from('gs_days').select('*').eq('user_id', uid).gte('date', since)
+  if (until) q = q.lte('date', until)
+  const rows = unwrap(await q)
   return Object.fromEntries(rows.map(r => [r.date, toApp(r)]))
 }
 
 /** 내 기록 전체: 공개 기록에 비공개 체크·투두를 덮어쓴다. */
-export async function listMyDays(uid, since) {
-  const [pub, priv] = await Promise.all([
-    listDays(uid, since),
-    supabase.from('gs_day_private').select('date,checks,todos').eq('user_id', uid).gte('date', since).then(unwrap),
-  ])
+export async function listMyDays(uid, since, until) {
+  let pq = supabase.from('gs_day_private').select('date,checks,todos').eq('user_id', uid).gte('date', since)
+  if (until) pq = pq.lte('date', until)
+  const [pub, priv] = await Promise.all([listDays(uid, since, until), pq.then(unwrap)])
   priv.forEach(p => { pub[p.date] = normDay({ ...pub[p.date], checks: p.checks, todos: p.todos }, p.date) })
   return pub
 }

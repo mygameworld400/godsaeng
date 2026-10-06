@@ -7,9 +7,11 @@ import Hompy from './components/Hompy'
 import Friends from './components/Friends'
 import Bets from './components/Bets'
 import Settings from './components/Settings'
+import Categories from './components/Categories'
 
-const TABS = [['today', '오늘'], ['hompy', '미니홈피'], ['friends', '친구'], ['bets', '내기']]
-const fromHash = () => { const h = location.hash.slice(1); return h === 'settings' || TABS.some(t => t[0] === h) ? h : 'today' }
+const TABS = [['today', '오늘'], ['cats', '카테고리'], ['hompy', '미니홈피'], ['friends', '친구'], ['bets', '내기']]
+// 'cats/<id>' 는 카테고리 페이지
+const fromHash = () => { const h = decodeURIComponent(location.hash.slice(1)); return h === 'settings' || h.startsWith('cats/') || TABS.some(t => t[0] === h) ? h : 'today' }
 
 export default function App() {
   const { S, act } = useStore()
@@ -38,6 +40,7 @@ export default function App() {
   else if (!S.uid) body = <Login />
   else if (!me) body = <Onboard />
   else if (tab === 'today') body = <Today />
+  else if (tab === 'cats' || tab.startsWith('cats/')) body = <Categories catId={tab.slice(5)} />
   else if (tab === 'hompy') body = <Hompy />
   else if (tab === 'friends') body = <Friends />
   else body = <Bets />
@@ -49,7 +52,7 @@ export default function App() {
           <h1 className="brand"><span>갓생홈피</span></h1>
           <nav className="tabs" role="tablist" aria-label="메뉴">
             {me && TABS.map(([k, l]) => (
-              <button key={k} className="tab" role="tab" aria-selected={tab === k} onClick={() => go(k)}>
+              <button key={k} className="tab" role="tab" aria-selected={tab === k || (k === 'cats' && tab.startsWith('cats/'))} onClick={() => go(k)}>
                 {l}{((k === 'bets' && invites) || (k === 'friends' && added)) ? <span className="dot" aria-label="새 소식" /> : null}
               </button>
             ))}

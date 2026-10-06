@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import * as admin from '../services/adminService'
-import { ConfirmX, formVals } from './common'
+import * as categories from '../services/categoryService'
+import { COLORS, CatIcon, ConfirmX, formVals } from './common'
 import { explain } from './Login'
 
 /* 설정: 화면 설정(추후 폰트 등) + 관리자 모드.
@@ -46,14 +47,48 @@ function AccountRow({ a, code, onDone, toast }) {
   )
 }
 
+/** 기본 카테고리 한 줄: 아이콘·이름·색·순서 수정, 삭제 */
+function BaseCatForm({ c, code, onDone, toast }) {
+  const save = async e => {
+    const v = formVals(e)
+    if (!v.name) return
+    try {
+      await categories.adminSaveBaseCat(code, { id: c?.id, name: v.name, icon: v.icon, color: v.color, sort: +v.sort || 0 })
+      toast(c ? '저장했어요.' : '기본 카테고리를 추가했어요.')
+      if (!c) e.currentTarget.reset()
+      onDone()
+    } catch (err) { toast(explain(err)) }
+  }
+  const del = async () => {
+    try { await categories.adminDeleteBaseCat(code, c.id); toast('지웠어요. 이미 추가한 사람의 카테고리는 남아 있어요.'); onDone() } catch (err) { toast(explain(err)) }
+  }
+  return (
+    <form className="addf basecat" onSubmit={save}>
+      {c && <CatIcon cat={c} />}
+      <input className="inp" name="icon" defaultValue={c?.icon || ''} maxLength={4} placeholder="🏷️" aria-label="아이콘(이모지)" style={{ flex: '0 0 64px' }} />
+      <input className="inp" name="name" defaultValue={c?.name || ''} maxLength={12} placeholder="카테고리 이름" aria-label="이름" required />
+      <select className="inp" name="color" defaultValue={c?.color || 'c1'} aria-label="색">
+        {COLORS.map((k, i) => <option key={k} value={k}>색 {i + 1}</option>)}
+      </select>
+      <input className="inp" name="sort" type="number" defaultValue={c?.sort ?? 0} aria-label="순서" title="작을수록 앞" style={{ flex: '0 0 70px' }} />
+      <button className="btn pri sm">{c ? '저장' : '추가'}</button>
+      {c && <ConfirmX onConfirm={del} label="삭제" className="btn sm warn" />}
+    </form>
+  )
+}
+
 export default function Settings() {
   const { S, act } = useStore()
   const [code, setCode] = useState('')
   const [list, setList] = useState(null)
+  const [baseCats, setBaseCats] = useState([])
   const [msg, setMsg] = useState('')
 
   const load = async c => {
-    try { setList(await admin.listAccounts(c)); setCode(c); setMsg('') } catch (err) { setMsg(explain(err)) }
+    try {
+      const [accts, base] = await Promise.all([admin.listAccounts(c), categories.adminListBaseCats(c)])
+      setList(accts); setBaseCats(base); setCode(c); setMsg('')
+    } catch (err) { setMsg(explain(err)) }
   }
 
   return (
@@ -81,6 +116,12 @@ export default function Settings() {
               {list.length ? list.map(a => (
                 <AccountRow key={a.id} a={a} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
               )) : <p className="empty">아직 가입한 계정이 없어요.</p>}
+            </div>
+            <h2><span>기본 카테고리</span></h2>
+            <p className="sub">모두에게 보이는 기본 카테고리예요. 각자 카테고리 탭에서 골라 추가해요. 순서는 숫자가 작을수록 앞이에요.</p>
+            <div className="stack" style={{ gap: 10 }}>
+              {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
+              <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
           </>}
       </section>

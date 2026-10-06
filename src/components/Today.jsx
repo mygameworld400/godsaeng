@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { today, pretty } from '../lib/date'
 import { stat, pc } from '../lib/stats'
-import { MOODS, ConfirmX, CatSelect, Groups, PubToggle, formVals } from './common'
+import { MOODS, ConfirmX, CatIcon, CatSelect, Groups, PubToggle, formVals } from './common'
+import Calendar from './Calendar'
 
 export default function Today() {
   const { S, act } = useStore()
-  const [manageCats, setManageCats] = useState(false)
   const [filter, setFilter] = useState('')  // '' 전체 / 'none' 미분류 / 카테고리 id
   const me = S.me, d = act.myDay(S.date), isToday = S.date === today(), st = stat(me, d, true)
   const routines = me.routines.map(r => ({ ...r, _done: !!d.checks[r.id] }))
@@ -31,27 +31,17 @@ export default function Today() {
         </div>
       </div>
 
+      <Calendar />
+
       <section className="sheet">
         <div className="row between">
-          <h2><span>내 카테고리</span></h2>
-          <button className="btn sm" onClick={() => setManageCats(!manageCats)}>{manageCats ? '완료' : '편집'}</button>
+          <h2><button className="linkh" onClick={() => { location.hash = 'cats' }}><span>내 카테고리</span> ›</button></h2>
         </div>
-        <p className="sub">카테고리를 누르면 그 카테고리의 루틴과 투두만 모아 볼 수 있어요.</p>
-        <div className="chips">
-          <span className={'chip' + (filter ? '' : ' on')}><button className="chipb" aria-pressed={!filter} onClick={() => setFilter('')}>전체</button>&nbsp;</span>
-          {me.cats.map(c => (
-            <span className={'chip' + (filter === c.id ? ' on' : '')} key={c.id}>
-              <button className="chipb" aria-pressed={filter === c.id} onClick={() => setFilter(c.id)}>
-                <span className="cdot" style={{ background: `var(--${c.color})` }} />{c.name}
-              </button>
-              {manageCats ? <ConfirmX onConfirm={() => { act.delCat(c.id); if (filter === c.id) setFilter('') }} /> : ' '}
-            </span>
-          ))}
-          <span className={'chip' + (filter === 'none' ? ' on' : '')}><button className="chipb" aria-pressed={filter === 'none'} onClick={() => setFilter('none')}><span className="cdot" />미분류</button>&nbsp;</span>
-          <form className="addf" style={{ flex: '1 1 180px' }} onSubmit={add(v => act.addCat(v.text))}>
-            <input className="inp" name="text" maxLength={12} placeholder="새 카테고리 (예: 운동)" aria-label="새 카테고리 이름" />
-            <button className="btn">만들기</button>
-          </form>
+        <p className="sub">아이콘을 누르면 그 카테고리의 루틴과 투두만 모아 볼 수 있어요. 카테고리 추가·수정은 카테고리 탭에서 해요.</p>
+        <div className="icons">
+          <CatIcon cat={{ icon: '✨' }} label="전체" on={!filter} onClick={() => setFilter('')} />
+          {me.cats.map(c => <CatIcon key={c.id} cat={c} on={filter === c.id} onClick={() => setFilter(filter === c.id ? '' : c.id)} />)}
+          <CatIcon cat={{ icon: '📦' }} label="미분류" on={filter === 'none'} onClick={() => setFilter(filter === 'none' ? '' : 'none')} />
         </div>
       </section>
 

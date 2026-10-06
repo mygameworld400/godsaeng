@@ -50,7 +50,7 @@ try {
 
   console.log('프로필 / 하루 기록')
   const pa = await A.sb.from('gs_profiles').select('*').eq('id', A.id).single()
-  ok(pa.data?.handle === A.h && pa.data?.nick === A.nick && pa.data?.cats.length === 3, '가입 시 아이디·닉네임 따로 저장 + 기본 카테고리 3개')
+  ok(pa.data?.handle === A.h && pa.data?.nick === A.nick && pa.data?.cats.length === 0, '가입 시 아이디·닉네임 따로 저장, 카테고리는 비어서 시작')
   // 앱과 같은 방식으로 저장: 공개분은 buildDay, 전체는 privDay (src/hooks/useStore.jsx saveMe/saveDay)
   const me = { routines: [{ id: 'r1', text: '공개루틴-스트레칭', cat: '', pub: true }, { id: 'r2', text: '비밀루틴-약먹기', cat: '', pub: false }] }
   const day = normDay({ checks: { r1: true, r2: true }, todos: [
@@ -130,6 +130,24 @@ try {
     ok(!(await adm('gs_admin_delete', { p_id: extraId })).error, '관리자가 계정 삭제')
     ok(!(await adm('gs_admin_list', {})).data?.some(a => a.id === extraId), '삭제한 계정은 목록에서 사라짐')
   }
+
+  console.log('카테고리')
+  const base = await A.sb.from('gs_base_cats').select('*')
+  ok(!base.error && base.data.length > 0, '멤버는 기본 카테고리 목록을 봄')
+  ok((await client().from('gs_base_cats').select('*')).data?.length === 0, '로그인 안 하면 기본 카테고리도 안 보임')
+  ok(!!(await A.sb.from('gs_base_cats').insert({ name: '해킹' })).error, '일반 사용자는 기본 카테고리를 직접 못 만듦')
+  ok((await A.sb.rpc('gs_admin_base_cat_save', { p_code: 'wrong', p_id: null, p_name: 'x', p_icon: '', p_color: '', p_sort: 0 })).error?.message.includes('bad_admin'), '관리자 코드 없이 기본 카테고리 저장 불가')
+  const catName = 'T' + tag
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: null, p_name: catName, p_icon: '🧪', p_color: 'c5', p_sort: 99 })).error, '관리자가 기본 카테고리 추가')
+  const made = (await adm('gs_admin_base_cats', {})).data?.find(c => c.name === catName)
+  ok(made?.icon === '🧪', '관리자 목록에 새 기본 카테고리')
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '🎯', p_color: '', p_sort: 98 })).error, '관리자가 기본 카테고리 수정')
+  ok((await B.sb.from('gs_base_cats').select('*').eq('id', made?.id).single()).data?.icon === '🎯', '수정 내용이 사용자에게 보임')
+  ok(!(await adm('gs_admin_base_cat_delete', { p_id: made?.id })).error, '관리자가 기본 카테고리 삭제')
+  const details = { c1: { start: today, goal: '비밀목표', todos: [{ id: 'x', text: '비밀할일', done: false }] } }
+  ok(!(await A.sb.from('gs_private').update({ cat_details: details }).eq('user_id', A.id)).error, 'A 카테고리 세부(시작일·목표·투두) 저장')
+  ok((await A.sb.from('gs_private').select('cat_details').eq('user_id', A.id).single()).data?.cat_details?.c1?.goal === '비밀목표', 'A 는 자기 카테고리 세부를 다시 불러옴')
+  ok((await B.sb.from('gs_private').select('cat_details').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 카테고리 목표·투두를 못 봄')
 
   console.log('외부인')
   const anon = await client().from('gs_days').select('*')

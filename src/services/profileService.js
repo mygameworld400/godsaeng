@@ -11,18 +11,18 @@ export async function listProfiles() {
   return Object.fromEntries(rows.map(r => [r.id, toApp(r)]))
 }
 
-/** 내 전체 루틴 (비공개 포함). 없으면 null */
-export async function myRoutines(uid) {
-  const rows = unwrap(await supabase.from('gs_private').select('routines').eq('user_id', uid))
-  return rows[0]?.routines ?? null
+/** 본인 전용 데이터: 전체 루틴(비공개 포함) + 카테고리 세부. 없으면 null */
+export async function myPrivate(uid) {
+  const rows = unwrap(await supabase.from('gs_private').select('routines,cat_details').eq('user_id', uid))
+  return rows[0] ? { routines: rows[0].routines, catDetails: rows[0].cat_details || {} } : null
 }
 
-/** 공개 프로필에는 공개 루틴과 개수만, 전체 목록은 gs_private 에. */
-export async function saveProfile(uid, p) {
+/** 공개 프로필에는 공개 루틴과 개수만, 전체 목록과 카테고리 세부는 gs_private 에. */
+export async function saveProfile(uid, p, catDetails = {}) {
   const now = new Date().toISOString()
   unwrap(await supabase.from('gs_profiles').upsert({
     id: uid, nick: p.nick, emoji: p.emoji, bio: p.bio || '', cats: p.cats, friends: p.friends,
     routines: p.routines.filter(r => r.pub), r_count: p.routines.length, updated_at: now,
   }))
-  unwrap(await supabase.from('gs_private').upsert({ user_id: uid, routines: p.routines, updated_at: now }))
+  unwrap(await supabase.from('gs_private').upsert({ user_id: uid, routines: p.routines, cat_details: catDetails, updated_at: now }))
 }
