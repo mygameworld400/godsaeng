@@ -4,9 +4,10 @@ import * as admin from '../services/adminService'
 import * as categories from '../services/categoryService'
 import * as plans from '../services/planService'
 import * as questApi from '../services/questService'
+import * as bookApi from '../services/bookService'
 import PlanViewer from './PlanViewer'
 import { COLORS, ConfirmX, Help, Modal, avaOf, formVals } from './common'
-import { makeIcon, makeBackground } from '../lib/cutout'
+import { makeIcon, makeBackground, makeCover } from '../lib/cutout'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
 
@@ -325,6 +326,30 @@ function Display() {
   )
 }
 
+/* 책 표지 요청: 북 컬렉션에 제목만 넣은 책 목록. 표지를 올리면 그 사람 컬렉션에 바로 들어간다. */
+function BookRequests({ code, toast }) {
+  const [list, setList] = useState(null)
+  const load = () => bookApi.adminBookRequests(code).then(setList).catch(e => { setList([]); toast(explain(e)) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [code])
+  const upload = async (b, f) => {
+    try { await bookApi.adminBookCover(code, b.id, await makeCover(f)); toast(`「${b.title}」 표지를 넣었어요.`); load() } catch (e) { toast(explain(e)) }
+  }
+  return (
+    <>
+      <h2><span>책 표지 요청</span><Help>북 컬렉션에 표지 없이 담긴 책이에요. 표지 사진을 올리면 그 사람 컬렉션에 바로 보여요.</Help></h2>
+      {!list ? <p className="empty">불러오는 중…</p> : list.length ? list.map(b => (
+        <div className="person" key={b.id}>
+          <div className="nm" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
+            <b>{b.title}</b><small className="sub">{b.author ? b.author + ' · ' : ''}{b.nick} · {localDateTime(b.created_at)}</small>
+          </div>
+          <label className="btn sm pri">표지 올리기<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload(b, f) }} /></label>
+        </div>
+      )) : <p className="empty">표지를 기다리는 책이 없어요.</p>}
+    </>
+  )
+}
+
 export default function Settings() {
   const { S, act } = useStore()
   const [code, setCode] = useState('')
@@ -378,6 +403,7 @@ export default function Settings() {
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
             <Backup code={code} toast={act.toast} />
+            <BookRequests code={code} toast={act.toast} />
             <AdminQuests code={code} baseCats={baseCats} toast={act.toast} refresh={act.refresh} />
             <PlanTest code={code} toast={act.toast} />
           </>}

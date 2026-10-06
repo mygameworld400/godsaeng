@@ -437,6 +437,13 @@ html[data-bgimg] body{background-image:var(--bgimg);background-size:cover;backgr
 .wk-d.today{border-color:var(--ink)}
 .wk-d.sel{background:var(--hl);border-color:var(--ink)}
 .wk-log{display:flex;flex-direction:column;gap:6px}
+.cal .d{position:relative}
+.wk-mark{position:absolute;top:2px;right:3px;line-height:0}
+.cover.mini{height:150px;width:auto;max-width:none;cursor:pointer;flex:none}
+.cover.mini:disabled{cursor:default}
+.cover.mini .cover-title{font-size:13px}
+.cover.mini .cover-sub{font-size:10px}
+.cover.mini .cover-label{padding:4px}
 .recs{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mitem{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;border-radius:12px;padding:4px 2px;border:1.5px dashed var(--line)}
 .mitem.dragging{opacity:.4}

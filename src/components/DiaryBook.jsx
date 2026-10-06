@@ -31,6 +31,17 @@ function useNarrow() {
   return n
 }
 
+/** 작은 표지 (친구 미니홈피 등에서 표지만 보여 줄 때) */
+export function CoverMini({ cover, onClick, title }) {
+  const c = { ...DEFAULT, ...cover }
+  return (
+    <button type="button" className={'cover mini pat-' + c.pattern} style={{ '--cover': c.color }} onClick={onClick} title={title} disabled={!onClick}>
+      <span className="cover-spine" />
+      <Label c={c} />
+    </button>
+  )
+}
+
 function Label({ c }) {
   return (
     <div className={'cover-label shape-' + c.shape}>

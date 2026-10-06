@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { WD, today, toD } from '../lib/date'
 import { stat } from '../lib/stats'
-import { ConfirmX, Help } from './common'
+import { CatGlyph, ConfirmX, Help, withImage } from './common'
 import EventForm from './EventForm'
 
 /* 오늘 탭 맨 위 달력. 두 가지 보기:
@@ -40,6 +40,9 @@ export default function Calendar() {
   const move = n => { const d = new Date(y, m - 1 + n, 1); setYm(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')) }
   const evs = Object.values(S.events).sort((a, b) => a.start < b.start ? -1 : a.start > b.start ? 1 : (a.time || '').localeCompare(b.time || '') || a.title.localeCompare(b.title))
   const plan = mode === 'plan'
+  // 운동한 날: 날짜 → 그날 운동한 활동(아이콘) — 운동 활동 페이지의 기록
+  const workoutCat = {}
+  Object.values(S.workouts).forEach(w => { if (!workoutCat[w.date]) { const c = S.me.cats.find(x => x.id === w.catId); if (c) workoutCat[w.date] = withImage(c, S.baseCats) } })
 
   const cells = []
   for (let i = 0; i < first; i++) cells.push(<div key={'o' + i} className="d out" aria-hidden="true" />)
@@ -52,6 +55,7 @@ export default function Calendar() {
       <button key={ds} className={cls} onClick={() => act.setDateTo(ds)} aria-pressed={ds === S.date}
         aria-label={`${m}월 ${n}일` + (plan ? (dayEvs.length ? ` 일정 ${dayEvs.map(e => e.title).join(', ')}` : '') : (s?.tot ? ` 달성 ${s.pct}%` : ''))}>
         <span className="n">{n}</span>
+        {workoutCat[ds] && <span className="wk-mark" title="운동한 날"><CatGlyph cat={workoutCat[ds]} size={15} /></span>}
         {plan
           ? <span className="evs">
               {dayEvs.slice(0, 2).map(e => (

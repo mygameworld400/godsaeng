@@ -186,7 +186,7 @@ try {
   ok(!!(await A.sb.from('gs_events').insert({ user_id: A.id, title: '거꾸로 시간', start_date: today, start_time: '15:00', end_time: '14:00' })).error, '끝 시간이 시작보다 빠르면 거절')
   ok(!(await A.sb.from('gs_events').update({ hidden: true }).eq('user_id', A.id).eq('title', '치과')).error, '일정 달력에서 숨기기')
   ok(!(await A.sb.from('gs_private').update({ diary_cover: { color: '#7A5AE0', shape: 'heart', title: '갓생' } }).eq('user_id', A.id)).error, '다이어리 표지 저장')
-  ok((await B.sb.from('gs_private').select('diary_cover').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 다이어리 표지를 못 봄')
+  ok((await B.sb.from('gs_private').select('diary_cover').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 비공개 설정(gs_private)을 못 봄')
 
   console.log('챌린지')
   ok(!!(await A.sb.from('gs_quests').insert({ title: '해킹' })).error, '일반 사용자는 챌린지를 직접 못 만듦')
@@ -216,6 +216,18 @@ try {
   const lc = (await adm('gs_admin_base_cats', {})).data?.find(c => c.name === 'L' + tag)
   ok(lc?.page_kind === 'ledger', '추천 활동에 페이지 종류 저장')
   if (lc) await adm('gs_admin_base_cat_delete', { p_id: lc.id })
+
+  console.log('독서·운동·표지')
+  const bk2 = await A.sb.from('gs_books').insert({ user_id: A.id, cat_id: 'c1', title: '테스트 책' + tag }).select().single()
+  ok(!bk2.error, 'A 북 컬렉션에 제목만 담기')
+  ok((await B.sb.from('gs_books').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 책을 못 봄')
+  ok((await adm('gs_admin_book_requests', {})).data?.some(b => b.id === bk2.data?.id), '관리자 표지 요청 목록에 보임')
+  ok(!(await adm('gs_admin_book_cover', { p_id: bk2.data?.id, p_cover: png })).error, '관리자가 표지 넣기')
+  ok((await A.sb.from('gs_books').select('cover').eq('id', bk2.data?.id).single()).data?.cover === png, 'A 컬렉션에 표지가 들어감')
+  ok(!(await A.sb.from('gs_workouts').insert({ user_id: A.id, cat_id: 'c1', date: today, what: '러닝', minutes: 30 })).error, 'A 운동 기록')
+  ok((await B.sb.from('gs_workouts').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 운동 기록을 못 봄')
+  ok(!(await A.sb.from('gs_profiles').update({ diary_cover: { color: '#E5534B', shape: 'heart', title: '갓생' } }).eq('id', A.id)).error, 'A 다이어리 표지 공개 저장')
+  ok((await B.sb.from('gs_profiles').select('diary_cover').eq('id', A.id).single()).data?.diary_cover?.title === '갓생', 'B 가 A 의 다이어리 표지를 봄')
 
   console.log('백업')
   ok((await client().rpc('gs_admin_backup', { p_code: 'wrong' })).error?.message.includes('bad_admin'), '관리자 코드 없이 백업 불가')

@@ -4,6 +4,7 @@ import { today, pretty, localDate } from '../lib/date'
 import { stat, pc } from '../lib/stats'
 import { AvaPicker, ConfirmX, Help, Ring, avaOf, nickOf, formVals } from './common'
 import { makeAvatar } from '../lib/cutout'
+import DiaryBook, { CoverMini } from './DiaryBook'
 
 const SHOW = 4  // 목록은 4개까지 보이고 나머지는 펼쳐서 본다
 
@@ -14,6 +15,7 @@ export default function Hompy({ popup }) {
   const [emoji, setEmoji] = useState(S.me.emoji)
   const [avatar, setAvatar] = useState(S.me.avatar || '')  // 수정 중인 프로필 사진
   const [more, setMore] = useState({ r: false, t: false })
+  const [book, setBook] = useState(false)  // 내 다이어리 책
   const id = S.view || S.uid, mine = id === S.uid, p = mine ? S.me : S.people[id]
   const who = [S.uid, ...S.me.friends.filter(f => S.people[f])]
 
@@ -118,7 +120,13 @@ export default function Hompy({ popup }) {
       </div>
 
       <section className="sheet">
-        <h2><span>다이어리</span><Help>오늘 탭 일기에서 '공개하기'를 체크한 날의 일기가 여기에 모여요.</Help></h2>
+        <h2><span>다이어리</span><Help>오늘 탭 일기에서 '공개하기'를 체크한 날의 일기가 여기에 모여요. 친구의 다이어리는 표지만 보이고, 안의 내용은 주인만 봐요.</Help></h2>
+        {(mine ? S.diaryCover : p.diaryCover) && (
+          <div className="row" style={{ alignItems: 'flex-end', gap: 12 }}>
+            <CoverMini cover={mine ? S.diaryCover : p.diaryCover} onClick={mine ? () => setBook(true) : null} title={mine ? '다이어리 펼치기' : `${p.nick}의 다이어리`} />
+            <span className="sub">{mine ? '눌러서 내 다이어리를 펼쳐요.' : `${p.nick}의 다이어리 표지예요.`}</span>
+          </div>
+        )}
         {pubs.length ? pubs.map(x => (
           <div key={x.date}><p className="sub">{pretty(x.date)} {x.mood || ''}</p><p className="diary-ro">{x.diary}</p></div>
         )) : <p className="empty">{mine ? '오늘 탭의 일기에서 공개하기를 체크하면 여기에 보여요.' : '공개한 일기가 아직 없어요.'}</p>}
@@ -142,6 +150,7 @@ export default function Hompy({ popup }) {
           )) : <p className="empty">{mine ? '아직 방명록이 비어 있어요. 친구들이 남긴 글이 여기에 보여요.' : '아직 방명록이 비어 있어요. 첫 글을 남겨 보세요.'}</p>}
         </div>
       </section>
+      {book && mine && <DiaryBook onClose={() => setBook(false)} />}
     </div>
   )
 }
