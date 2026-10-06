@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import * as admin from '../services/adminService'
 import * as categories from '../services/categoryService'
-import { COLORS, ConfirmX, Help, formVals } from './common'
+import * as plans from '../services/planService'
+import PlanViewer from './PlanViewer'
+import { COLORS, ConfirmX, Help, Modal, formVals } from './common'
 import { makeIcon } from '../lib/cutout'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
@@ -145,6 +147,42 @@ function BaseCatForm({ c, code, onDone, toast }) {
   )
 }
 
+/* 테스트 모드: 템플릿을 실제 내 활동과 상관없이 열어 본다. 진도·점수는 이 브라우저에만 저장. */
+const testKey = id => 'godsaeng-plan-test-' + id
+const readTest = id => { try { return JSON.parse(localStorage.getItem(testKey(id))) || {} } catch { return {} } }
+const writeTest = (id, v) => { try { localStorage.setItem(testKey(id), JSON.stringify(v)) } catch { /* 저장 못 해도 화면은 동작 */ } }
+
+function PlanTest({ code, toast }) {
+  const [list, setList] = useState(null)
+  const [open, setOpen] = useState(null)       // { id, tpl }
+  const [pg, setPg] = useState({})
+  useEffect(() => { plans.adminListPlans(code).then(setList).catch(e => toast(explain(e))) }, [code, toast])
+  const start = async id => {
+    try { setOpen({ id, tpl: await plans.adminGetPlan(code, id) }); setPg(readTest(id)) } catch (e) { toast(explain(e)) }
+  }
+  const save = v => { setPg(v); writeTest(open.id, v) }
+  return (
+    <>
+      <h2><span>플랜 템플릿</span><Help>활동에 붙일 공부 플랜이에요. 테스트 모드는 실제 내 활동이 아니라서, 진도와 점수가 이 브라우저에만 저장되고 다른 사람에게 보이지 않아요.</Help></h2>
+      {!list ? <p className="empty">불러오는 중…</p> : list.length ? list.map(t => (
+        <div className="person" key={t.id}>
+          <div className="nm" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}><b>{t.title}</b><small className="sub">{t.days}일 · {t.summary}</small></div>
+          <button className="btn sm pri" onClick={() => start(t.id)}>테스트 모드로 열기</button>
+        </div>
+      )) : <p className="empty">아직 올라온 템플릿이 없어요.</p>}
+      {open && (
+        <Modal wide title="테스트 모드" onClose={() => setOpen(null)}>
+          <div className="note row between">
+            <span>🧪 테스트 모드예요. 내 활동에 저장되지 않고, 진도·점수는 이 브라우저에만 남아요.</span>
+            <ConfirmX onConfirm={() => save({})} label="진도 초기화" className="btn sm" />
+          </div>
+          <PlanViewer tpl={open.tpl} progress={pg} setProgress={save} />
+        </Modal>
+      )}
+    </>
+  )
+}
+
 export default function Settings() {
   const { S, act } = useStore()
   const [code, setCode] = useState('')
@@ -190,6 +228,7 @@ export default function Settings() {
               {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
+            <PlanTest code={code} toast={act.toast} />
           </>}
       </section>
     </div>
