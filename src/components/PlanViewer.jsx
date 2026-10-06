@@ -62,16 +62,16 @@ function StudyTimer({ day, pg, set, timer, setTimer }) {
   const total = Object.values(pg.time).reduce((a, b) => a + b, 0) + (running ? Date.now() - timer.start : 0)
   const start = () => setTimer({ day, start: Date.now() })
   const pause = () => { set({ ...pg, time: { ...pg.time, [day]: now } }); setTimer({ day: null, start: null }) }
+  // 같은 스톱워치를 Day 맨 위와 맨 아래에 하나씩 둔다 (상태는 PlanViewer 의 timer·progress 를 함께 쓴다)
   return (
     <div className="watch">
-      <div className="watch-face">
-        <span className="watch-time">{mmss(now)}</span>
-        <span className="watch-now">{running ? '공부 중…' : saved ? '오늘 공부 시간' : '공부를 시작하면 눌러요'}</span>
-      </div>
-      <div className="row">
-        {running ? <button className="btn sm" onClick={pause}>일시정지</button> : <button className="btn sm pri" onClick={start}>{saved ? '이어서 공부' : '공부 시작'}</button>}
-        {!running && saved > 0 && <ConfirmX onConfirm={() => set({ ...pg, time: { ...pg.time, [day]: 0 } })} label="기록 지우기" className="btn sm" />}
-        <span className="sub">전체 공부 시간 {mmss(total)}</span>
+      <span className="watch-time">{mmss(now)}</span>
+      <div className="watch-side">
+        <div className="row">
+          {running ? <button className="btn pri" onClick={pause}>일시정지</button> : <button className="btn pri" onClick={start}>{saved ? '이어서 공부' : '공부 시작'}</button>}
+          {!running && saved > 0 && <ConfirmX onConfirm={() => set({ ...pg, time: { ...pg.time, [day]: 0 } })} label="기록 지우기" className="btn sm" />}
+        </div>
+        <span className="sub">전체 공부 시간 <b className="watch-total">{mmss(total)}</b></span>
       </div>
     </div>
   )
@@ -223,6 +223,8 @@ function DayView({ tpl, d, pg, set, go, editing, updDay, timer, setTimer }) {
           {BLOCK_TYPES.map(([t, l]) => <button key={t} className="btn sm" onClick={() => addBlock(t)}>+ {l}</button>)}
         </div>
       )}
+
+      {!editing && <section className="sheet"><StudyTimer day={d.day} pg={pg} set={set} timer={timer} setTimer={setTimer} /></section>}
 
       {!editing && (
         <section className="sheet done-box">

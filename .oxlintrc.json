@@ -1,4 +1,15 @@
 {
-  "env": { "browser": true, "es2024": true },
-  "rules": { "no-undef": "error" }
+  "plugins": [
+    "react"
+  ],
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "rules": {
+    "no-undef": "error",
+    "react-hooks/rules-of-hooks": "error",
+    "react/purity": "off",
+    "react/set-state-in-effect": "off"
+  }
 }

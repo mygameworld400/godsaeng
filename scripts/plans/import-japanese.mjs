@@ -2,6 +2,7 @@
 // 사용: node scripts/plans/import-japanese.mjs "<자료 폴더>" [--dry]
 //   자료 폴더: 00_먼저읽기.md, 05_플래시카드.tsv, 06_수업자료.md, 07_시험문항.csv, 11_역할극카드와_말하기평가.md
 //   운영 방식: 월~목 개인 공부(지난 수업 시험 → 복습+오답노트 → 오늘 공부 → 일일 테스트), 금요일 모임
+//   시험은 배운 것 전부(원래 문항 + 해당 범위 단어·예문 전부). 짝 연습은 넣지 않는다.
 //   --dry 이면 업로드하지 않고 scripts/plans/out/japanese-12w.json 만 쓴다 (out/ 는 gitignore).
 // 자료 원문은 저장소에 넣지 않는다. 업로드에는 .env.local(키) + .env.test.local(GS_ADMIN_CODE) 필요.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
@@ -92,15 +93,26 @@ const refs = [
 /* ---------- Day → 블록 (PlanViewer v2 형식) ---------- */
 let seq = 0
 const bid = () => 'b' + (++seq).toString(36)
-const soloPractice = d => d.week <= 3
-  ? '글자표를 가리고 오늘 글자를 하나씩 읽고 받아써요. 단어를 무작위로 골라 소리 내어 읽고 🔊 로 확인해요.'
-  : '예문을 🔊 로 듣고 소리 내어 따라 읽은 뒤 가려요. 뜻만 보고 일본어로 말해 보고, 사람·물건·시간 중 하나를 바꿔 2문장을 만들어 녹음해요.'
 const dailyTest = (d) => [
   ...d.words.map((w, i) => ({ id: `T${String(d.day).padStart(2, '0')}-w${i + 1}`, type: '단어 뜻', q: `${w.jp}의 뜻을 쓰세요.`, a: w.mean })),
   ...d.examples.map((e, i) => ({ id: `T${String(d.day).padStart(2, '0')}-e${i + 1}`, type: '표현 만들기', q: `일본어로 말하거나 쓰세요: ${e.mean}`, a: e.jp === e.read ? e.jp : `${e.jp} / 읽기: ${e.read}` })),
 ]
+// 시험은 배운 것 전부: 원래 문항 + 해당 범위의 단어·예문 전부 (같은 문제는 하나만)
+const fromContent = (src, prefix) => [
+  ...src.words.map((w, i) => ({ id: `${prefix}-d${src.day}w${i + 1}`, type: '단어 뜻', q: `${w.jp}의 뜻을 쓰세요.`, a: w.mean })),
+  ...src.examples.map((e, i) => ({ id: `${prefix}-d${src.day}e${i + 1}`, type: '표현 만들기', q: `일본어로 말하거나 쓰세요: ${e.mean}`, a: e.jp === e.read ? e.jp : `${e.jp} / 읽기: ${e.read}` })),
+]
+const norm = q => q.replace(/\s+/g, '').replace(/[.。]/g, '')
+const merge = (...lists) => { const seen = new Set(); return lists.flat().filter(q => { const k = norm(q.q); if (seen.has(k)) return false; seen.add(k); return true }) }
+const prevLesson = d => rawDays.filter(x => x.day < d.day && x.kind === 'lesson').at(-1)
+const weekLessons = d => rawDays.filter(x => x.week === d.week && x.kind === 'lesson')
+
 const days = rawDays.map(d => {
-  const qs = quiz[d.day] || [], blocks = []
+  const prev = d.day > 1 ? prevLesson(d) : null
+  const qs = d.kind === 'test'
+    ? merge(quiz[d.day] || [], ...weekLessons(d).map(x => fromContent(x, `W${d.week}`)))
+    : merge(quiz[d.day] || [], prev ? fromContent(prev, `P${String(d.day).padStart(2, '0')}`) : [])
+  const blocks = []
   const add = b => blocks.push({ id: bid(), ...b })
   if (d.kind === 'test') {
     add({ type: 'heading', title: '금요일 모임' })
@@ -117,7 +129,6 @@ const days = rawDays.map(d => {
     if (d.sounds.length) add({ type: 'sounds', title: '소리표', items: d.sounds })
     if (d.words.length) add({ type: 'words', title: '단어', items: d.words })
     if (d.examples.length) add({ type: 'examples', title: '예문', items: d.examples })
-    add({ type: 'text', title: '혼자 말하기 연습', body: soloPractice(d) })
     const dt = dailyTest(d)
     if (dt.length) { add({ type: 'heading', title: '④ 일일 테스트' }); add({ type: 'quiz', title: '일일 테스트', items: dt }) }
   }

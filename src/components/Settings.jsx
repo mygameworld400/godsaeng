@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore'
 import * as admin from '../services/adminService'
 import * as categories from '../services/categoryService'
 import * as plans from '../services/planService'
+import * as questApi from '../services/questService'
 import PlanViewer from './PlanViewer'
 import { COLORS, ConfirmX, Help, Modal, avaOf, formVals } from './common'
 import { makeIcon } from '../lib/cutout'
@@ -186,6 +187,67 @@ function PlanTest({ code, toast }) {
   )
 }
 
+/* 챌린지 관리: 템플릿 + 연결할 추천 활동(하위 선택지)을 고른다. 아직은 관리자만 만든다. */
+function QuestForm({ q, code, baseCats, plansList, onDone, toast }) {
+  const [baseId, setBaseId] = useState(q?.baseId || '')
+  const base = baseCats.find(b => b.id === baseId)
+  const save = async e => {
+    const form = e.currentTarget, v = formVals(e)
+    if (!v.title) return
+    try {
+      await questApi.adminSaveQuest(code, { id: q?.id, title: v.title, description: v.description, templateId: v.templateId, baseId, optionId: v.optionId, sort: +v.sort || 0 })
+      toast(q ? '챌린지를 저장했어요.' : '챌린지를 만들었어요.'); if (!q) { form.reset(); setBaseId('') }
+      onDone()
+    } catch (err) { toast(explain(err)) }
+  }
+  return (
+    <form className="basecat" onSubmit={save} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+      <div className="addf">
+        <input className="inp" name="title" defaultValue={q?.title || ''} maxLength={40} placeholder="챌린지 이름 (예: 12주 챌린지)" aria-label="챌린지 이름" required />
+        <input className="inp" name="sort" type="number" defaultValue={q?.sort ?? 0} aria-label="순서" style={{ flex: '0 0 70px' }} />
+      </div>
+      <textarea className="inp" name="description" rows={2} defaultValue={q?.description || ''} placeholder="간단한 설명 (챌린지 화면 맨 위에 보여요)" aria-label="설명" />
+      <div className="addf">
+        <select className="inp" name="templateId" defaultValue={q?.templateId || ''} aria-label="플랜 템플릿" style={{ maxWidth: 'none' }}>
+          <option value="">플랜 템플릿 고르기</option>
+          {plansList.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+        </select>
+        <select className="inp" value={baseId} onChange={e => setBaseId(e.target.value)} aria-label="연결할 추천 활동" style={{ maxWidth: 'none' }}>
+          <option value="">연결할 추천 활동</option>
+          {baseCats.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select>
+        {base?.options?.length > 0 && (
+          <select className="inp" name="optionId" defaultValue={q?.optionId || ''} key={baseId} aria-label="하위 선택지" style={{ maxWidth: 'none' }}>
+            <option value="">(하위 선택지 없음)</option>
+            {base.options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        )}
+      </div>
+      <div className="row">
+        <button className="btn pri sm">{q ? '저장' : '챌린지 만들기'}</button>
+        {q && <ConfirmX onConfirm={async () => { try { await questApi.adminDeleteQuest(code, q.id); toast('챌린지를 지웠어요.'); onDone() } catch (err) { toast(explain(err)) } }} label="삭제" className="btn sm warn" />}
+      </div>
+    </form>
+  )
+}
+
+function AdminQuests({ code, baseCats, toast, refresh }) {
+  const [list, setList] = useState(null), [plansList, setPlans] = useState([])
+  const load = () => Promise.all([questApi.adminListQuests(code), plans.adminListPlans(code)]).then(([q, p]) => { setList(q); setPlans(p) }).catch(e => toast(explain(e)))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [code])
+  const done = () => { load(); refresh() }
+  return (
+    <>
+      <h2><span>챌린지</span><Help>플랜 템플릿을 여러 사람이 함께 하는 챌린지예요. 연결한 추천 활동(예: 언어 → 일본어) 옆에 보이고, 참여하면 그 활동이 참여자 활동에 담겨요.</Help></h2>
+      {!list ? <p className="empty">불러오는 중…</p> : <div className="stack" style={{ gap: 10 }}>
+        {list.map(q => <QuestForm key={q.id + q.title + q.templateId + q.baseId + q.optionId + q.sort + q.description} q={q} code={code} baseCats={baseCats} plansList={plansList} onDone={done} toast={toast} />)}
+        <QuestForm code={code} baseCats={baseCats} plansList={plansList} onDone={done} toast={toast} />
+      </div>}
+    </>
+  )
+}
+
 export default function Settings() {
   const { S, act } = useStore()
   const [code, setCode] = useState('')
@@ -231,6 +293,7 @@ export default function Settings() {
               {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
+            <AdminQuests code={code} baseCats={baseCats} toast={act.toast} refresh={act.refresh} />
             <PlanTest code={code} toast={act.toast} />
           </>}
       </section>

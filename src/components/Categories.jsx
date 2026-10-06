@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
 import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, Modal, catIcon, formVals, withImage } from './common'
+import QuestPage, { questCat } from './QuestPage'
 
 /* 활동 탭. 내 활동(담은 기본 + 직접 만든 개별)을 내가 정한 순서로 한 목록에 보여 준다.
    기본 활동(관리자가 정한 것)은 '추천 활동' 버튼을 눌러야 보이고, 눌러서 담는다.
@@ -107,6 +108,24 @@ function CatList() {
           </form>
         )}
       </section>
+
+      {S.quests.length > 0 && (
+        <section className="sheet">
+          <h2><span>챌린지</span><Help>여러 사람이 같은 플랜을 함께 하는 챌린지예요. 누르면 참여한 사람과 설명이 보이고, 참여하면 그 활동이 내 활동에 담겨요.</Help></h2>
+          <div className="quests">
+            {S.quests.map(q => {
+              const cat = questCat(q, S.baseCats), joined = q.members.some(m => m.userId === S.uid)
+              return (
+                <button key={q.id} className={'quest' + (joined ? ' on' : '')} onClick={() => goCat('q:' + q.id)}>
+                  <CatGlyph cat={cat} size={34} />
+                  <span className="quest-t"><small>{cat.name}</small><b>{q.title}</b></span>
+                  <span className="pill">{q.members.length}명{joined ? ' · 참여 중' : ''}</span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
@@ -115,6 +134,7 @@ function CatPage({ id }) {
   const { S, act } = useStore()
   const [edit, setEdit] = useState(false)
   const [editTodo, setEditTodo] = useState(null)  // 수정 중인 투두 id
+  const [helper, setHelper] = useState(false)   // 개인공부 도우미 (준비 중)
   const cat = S.me.cats.find(c => c.id === id)
   const [icon, setIcon] = useState(catIcon(cat))
   if (!cat) return (
@@ -123,6 +143,7 @@ function CatPage({ id }) {
       <div className="row"><button className="btn" onClick={() => goCat()}>‹ 활동 목록</button></div>
     </div>
   )
+  const linked = S.quests.filter(q => q.baseId === cat.base && (q.optionId || null) === (cat.opt || null))
   const d = act.catDetail(id), done = d.todos.filter(t => t.done).length
   const isBase = !!cat.base  // 기본 활동은 이름·아이콘을 관리자가 정한다 (빼기만 가능)
   const routines = S.me.routines.filter(r => r.cat === id)
@@ -138,6 +159,14 @@ function CatPage({ id }) {
   return (
     <div className="stack">
       <div className="row"><button className="btn sm" onClick={() => goCat()}>‹ 활동 목록</button></div>
+
+      {linked.length > 0 && (
+        <div className="cat-modes">
+          {linked.map(q => <button key={q.id} className="mode-btn" onClick={() => goCat('q:' + q.id)}>🏆 <b>챌린지</b><small>{q.title}</small></button>)}
+          <button className="mode-btn" onClick={() => setHelper(true)}>📘 <b>개인공부 도우미</b><small>나만의 공부 계획</small></button>
+        </div>
+      )}
+      {helper && <Modal title="개인공부 도우미" onClose={() => setHelper(false)}><p className="empty">준비 중이에요. 곧 만나요!</p></Modal>}
 
       <section className="sheet">
         <div className="hero">
@@ -212,5 +241,6 @@ function CatPage({ id }) {
 }
 
 export default function Categories({ catId }) {
+  if (catId?.startsWith('q:')) return <QuestPage key={catId} id={catId.slice(2)} back={() => history.length > 1 ? history.back() : goCat()} />
   return catId ? <CatPage key={catId} id={catId} /> : <CatList />
 }

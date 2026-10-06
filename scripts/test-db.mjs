@@ -188,6 +188,18 @@ try {
   ok(!(await A.sb.from('gs_private').update({ diary_cover: { color: '#7A5AE0', shape: 'heart', title: '갓생' } }).eq('user_id', A.id)).error, '다이어리 표지 저장')
   ok((await B.sb.from('gs_private').select('diary_cover').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 다이어리 표지를 못 봄')
 
+  console.log('챌린지')
+  ok(!!(await A.sb.from('gs_quests').insert({ title: '해킹' })).error, '일반 사용자는 챌린지를 직접 못 만듦')
+  const qid = await adm('gs_admin_quest_save', { p_id: '', p_title: 'T챌린지' + tag, p_description: '테스트', p_template_id: '', p_base_id: '', p_option_id: '', p_sort: 99 })
+  ok(!qid.error && !!qid.data, '관리자가 챌린지 생성')
+  ok(!(await A.sb.from('gs_quest_members').insert({ quest_id: qid.data, user_id: A.id })).error, 'A 챌린지 참여')
+  ok(!(await A.sb.from('gs_quest_members').update({ progress: { study: { 1: true } } }).eq('quest_id', qid.data).eq('user_id', A.id)).error, 'A 진도 저장')
+  ok((await B.sb.from('gs_quest_members').select('progress').eq('quest_id', qid.data).eq('user_id', A.id).single()).data?.progress?.study?.['1'] === true, 'B 가 A 의 챌린지 진도를 봄')
+  const hackQ = await B.sb.from('gs_quest_members').update({ progress: {} }).eq('quest_id', qid.data).eq('user_id', A.id).select()
+  ok(!hackQ.data?.length, 'B 는 A 의 진도를 못 고침')
+  ok(!!(await B.sb.from('gs_quest_members').insert({ quest_id: qid.data, user_id: A.id })).error, 'B 가 A 이름으로 참여 못 함')
+  ok(!(await adm('gs_admin_quest_delete', { p_id: qid.data })).error, '관리자가 챌린지 삭제 (참여 기록도 함께)')
+
   console.log('외부인')
   const anon = await client().from('gs_days').select('*')
   ok(anon.data?.length === 0, '로그인 안 하면 아무것도 안 보임')

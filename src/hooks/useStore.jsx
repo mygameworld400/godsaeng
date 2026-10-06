@@ -9,6 +9,7 @@ import * as cheers from '../services/cheerService'
 import * as bets from '../services/betService'
 import * as categories from '../services/categoryService'
 import * as events from '../services/eventService'
+import * as quests from '../services/questService'
 
 /* 전역 상태는 이 파일 하나에 모은다. 컴포넌트는 Supabase 를 직접 부르지 않는다.
    상태는 ref 하나에 두고 변경 후 bump() 로 다시 그린다 (원본 아티팩트 구조를 그대로 옮김).
@@ -30,7 +31,7 @@ export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {}, bubbleOpen: readBubble(),
+  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], bubbleOpen: readBubble(),
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -60,15 +61,15 @@ export function StoreProvider({ children }) {
 
   async function loadAll() {
     const uid = S.uid, since = addDays(today(), -45)
-    const [p, priv, d, di, ch, base] = await Promise.all([
+    const [p, priv, d, di, ch, base, qs] = await Promise.all([
       profiles.listProfiles(), profiles.myPrivate(uid), days.listMyDays(uid, since), days.listDiaries(uid, since), bets.listBets(),
-      categories.listBaseCats(),
+      categories.listBaseCats(), quests.listQuests().catch(() => []),  // 챌린지 테이블(014) 전이면 빈 목록
     ])
     S.people = p
     S.me = p[uid] ? { ...structuredClone(p[uid]), routines: priv?.routines ?? p[uid].routines } : null
     S.catDetails = priv?.catDetails || {}
     S.diaryCover = priv?.diaryCover  // undefined 면 표지 칸(013) 없음 → 저장 안 함
-    S.days = d; S.diary = di; S.ch = ch; S.baseCats = base; S.months = {}; S.events = {}
+    S.days = d; S.diary = di; S.ch = ch; S.baseCats = base; S.months = {}; S.events = {}; S.quests = qs
     syncBaseCats()
     await loadFriendDays()
     if (S.me && !S.view) await setView(uid)
@@ -90,9 +91,14 @@ export function StoreProvider({ children }) {
   /** 다른 사람·관리자가 바꾼 것만 가볍게 다시 받는다 (내 기록은 수정 중일 수 있어 건드리지 않음). */
   async function softRefresh() {
     if (S.local || !S.uid || !S.loaded) return
-    const [p, base, ch] = await Promise.all([profiles.listProfiles(), categories.listBaseCats(), bets.listBets()])
+    const [p, base, ch, qs] = await Promise.all([profiles.listProfiles(), categories.listBaseCats(), bets.listBets(), quests.listQuests().catch(() => null)])
     if (S.me && p[S.uid]) p[S.uid] = structuredClone(S.me)
     S.people = p; S.baseCats = base; S.ch = ch
+    if (qs) {
+      // 내 진도는 저장 대기 중일 수 있으니 화면 값 유지
+      for (const q of qs) { const old = S.quests.find(x => x.id === q.id)?.members.find(m => m.userId === S.uid); const mine = q.members.find(m => m.userId === S.uid); if (old && mine) mine.progress = old.progress }
+      S.quests = qs
+    }
     if (S.me && !p[S.uid]) { auth.signOut(); return }  // 관리자가 내 계정을 지운 경우
     syncBaseCats()
     await loadFriendDays()
@@ -243,6 +249,24 @@ export function StoreProvider({ children }) {
     delTodo(id) { const d = myDay(S.date); d.todos = d.todos.filter(t => t.id !== id); saveDay(S.date); bump() },
     setMood(m) { const d = myDay(S.date); d.mood = d.mood === m ? '' : m; saveDay(S.date); bump() },
     setPub(on) { myDay(S.date).pub = on; saveDay(S.date); bump() },
+    /* ---------- 챌린지 ---------- */
+    /** 참여: 참여자로 등록하고, 연결된 활동(예: 언어 → 일본어)이 없으면 내 활동에 담는다 */
+    joinQuest(q) {
+      if (q.members.some(m => m.userId === S.uid)) return
+      q.members.push({ userId: S.uid, progress: {}, joinedAt: new Date().toISOString() })
+      const b = S.baseCats.find(x => x.id === q.baseId), o = b && q.optionId ? b.options.find(x => x.id === q.optionId) : null
+      if (b && !S.me.cats.some(c => c.base === b.id && (c.opt || null) === (o?.id || null))) act.addBaseCat(b, o || undefined)
+      bump(); now(() => quests.joinQuest(q.id, S.uid))
+    },
+    leaveQuest(q) { q.members = q.members.filter(m => m.userId !== S.uid); bump(); now(() => quests.leaveQuest(q.id, S.uid)) },
+    /** 내 챌린지 진도 저장 (0.45초 모아서) */
+    setQuestProgress(q, progress) {
+      const m = q.members.find(x => x.userId === S.uid); if (!m) return
+      m.progress = progress; bump()
+      later('quest:' + q.id, () => quests.saveQuestProgress(q.id, S.uid, progress))
+    },
+    getTemplate: id => quests.getTemplate(id),
+
     /* ---------- 다이어리 책 ---------- */
     setDiaryAt(date, text) {
       S.diary[date] = text
