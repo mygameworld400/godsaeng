@@ -1,6 +1,6 @@
 import { supabase, unwrap } from '../lib/supabase'
 
-const toApp = r => ({ id: r.id, nick: r.nick, emoji: r.emoji, bio: r.bio, cats: r.cats || [], routines: r.routines || [], friends: r.friends || [] })
+const toApp = r => ({ id: r.id, handle: r.handle || '', nick: r.nick, emoji: r.emoji, bio: r.bio, cats: r.cats || [], routines: r.routines || [], friends: r.friends || [] })
 
 /** RLS 상 gs_profiles 가 있는 사람만 전체 목록을 받는다. */
 export async function listProfiles() {

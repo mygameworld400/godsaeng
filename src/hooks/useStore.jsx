@@ -103,7 +103,7 @@ export function StoreProvider({ children }) {
   }
 
   const act = {
-    signIn: auth.signIn, signUp: auth.signUp, signOut: auth.signOut, toast,
+    signIn: auth.signIn, register: auth.register, signOut: auth.signOut, toast,
     refresh: () => { if (!S.local && S.uid) loadAll().catch(onErr) },
     myDay,
 
