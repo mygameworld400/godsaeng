@@ -224,6 +224,10 @@ try {
   const lc = (await adm('gs_admin_base_cats', {})).data?.find(c => c.name === 'L' + tag)
   ok(lc?.page_kind === 'ledger', '추천 활동에 페이지 종류 저장')
   if (lc) await adm('gs_admin_base_cat_delete', { p_id: lc.id })
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: '', p_name: 'K' + tag, p_icon: '📚', p_color: 'c4', p_sort: 95, p_kind: 'knowledge' })).error, '관리자가 상식 페이지 추천 활동 생성')
+  const kc = (await adm('gs_admin_base_cats', {})).data?.find(c => c.name === 'K' + tag)
+  ok(kc?.page_kind === 'knowledge', '추천 활동에 상식 페이지 저장')
+  if (kc) await adm('gs_admin_base_cat_delete', { p_id: kc.id })
 
   console.log('독서·운동·표지')
   const bk2 = await A.sb.from('gs_books').insert({ user_id: A.id, cat_id: 'c1', title: '테스트 책' + tag }).select().single()
