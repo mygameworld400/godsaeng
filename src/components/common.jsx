@@ -7,11 +7,25 @@ export const CAT_ICONS = ['🏃', '📚', '🏠', '💪', '🧘', '🍎', '💧'
 export const COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 export const catIcon = c => c?.icon || '🏷️'
 
-/** 동그란 카테고리 아이콘 + 이름. dim 이면 아직 추가 안 한 기본 카테고리. */
+/** 기본 카테고리에서 온 카테고리는 원본(base)의 이미지를 쓴다 (이미지는 복사하지 않음). */
+export const withImage = (cat, baseCats) => {
+  if (!cat || cat.image) return cat
+  const b = cat.base ? baseCats.find(x => x.id === cat.base) : null
+  return b?.image ? { ...cat, image: b.image } : cat
+}
+
+/** 이미지(있으면) 또는 이모지 */
+export function CatGlyph({ cat, size }) {
+  return cat.image
+    ? <img className="cglyph-img" src={cat.image} alt="" style={size ? { width: size, height: size } : undefined} />
+    : <span className="cglyph-emoji" style={size ? { fontSize: size * 0.8 } : undefined}>{catIcon(cat)}</span>
+}
+
+/** 카테고리 아이콘 + 이름. dim 이면 아직 추가 안 한 기본 카테고리. */
 export function CatIcon({ cat, on, dim, badge, onClick, label }) {
   return (
     <button type="button" className={'cicon' + (on ? ' on' : '') + (dim ? ' dim' : '')} onClick={onClick} aria-pressed={on}>
-      <span className="cicon-c" style={{ borderColor: cat.color ? `var(--${cat.color})` : 'var(--line)' }}>{catIcon(cat)}{badge && <i className="cicon-b">{badge}</i>}</span>
+      <span className="cicon-c"><CatGlyph cat={cat} />{badge && <i className="cicon-b">{badge}</i>}</span>
       <span className="cicon-t">{label ?? cat.name}</span>
     </button>
   )

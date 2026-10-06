@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
-import { CAT_ICONS, COLORS, CatIcon, ConfirmX, catIcon, formVals } from './common'
+import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, catIcon, formVals, withImage } from './common'
 
-/* 카테고리 탭
-   - 기본 카테고리: 관리자가 정해 둔 목록. 눌러서 내 카테고리로 추가 (추가는 자유)
-   - 개별 카테고리: 직접 만든 것
+/* 카테고리 탭. 기본(관리자가 정해 둔 것, 골라서 추가)과 개별(직접 만든 것)은 개념상 구분일 뿐
+   화면에서는 한 목록으로 보여 준다.
    아이콘을 누르면 그 카테고리 페이지(시작 날짜 · 목표 · 투두리스트)로 간다.
    지금은 모든 카테고리가 같은 기본 구성이다. */
 
@@ -37,36 +36,27 @@ function CatList() {
   }
 
   return (
-    <div className="stack">
-      <section className="sheet">
-        <h2><span>기본 카테고리</span></h2>
-        <p className="sub">관리자가 준비해 둔 카테고리예요. 흐린 아이콘을 누르면 내 카테고리로 추가돼요.</p>
-        <div className="icons">
-          {S.baseCats.length ? S.baseCats.map(b => {
-            const added = addedOf(b)
-            return added
-              ? <CatIcon key={b.id} cat={added} onClick={() => goCat(added.id)} />
-              : <CatIcon key={b.id} cat={b} dim badge="+" onClick={() => act.addBaseCat(b)} />
-          }) : <p className="empty">아직 준비된 기본 카테고리가 없어요.</p>}
-        </div>
-      </section>
-
-      <section className="sheet">
-        <h2><span>개별 카테고리</span></h2>
-        <p className="sub">나만 쓰는 카테고리예요. 직접 만들 수 있어요.</p>
-        <div className="icons">
-          {custom.map(c => <CatIcon key={c.id} cat={c} onClick={() => goCat(c.id)} />)}
-          <CatIcon cat={{ icon: '＋' }} label="새 카테고리" on={adding} onClick={() => setAdding(!adding)} />
-        </div>
-        {adding && (
-          <form className="addf col" onSubmit={create}>
-            <label>이름<input className="inp" name="name" maxLength={12} placeholder="예: 다이어트" autoFocus /></label>
-            <IconPicker value={icon} onChange={setIcon} />
-            <div className="row"><button className="btn pri">만들기</button><button type="button" className="btn" onClick={() => setAdding(false)}>취소</button></div>
-          </form>
-        )}
-      </section>
-    </div>
+    <section className="sheet">
+      <h2><span>카테고리</span></h2>
+      <p className="sub">아이콘을 누르면 그 카테고리 페이지로 가요. 흐린 아이콘은 아직 추가하지 않은 카테고리예요. 누르면 내 카테고리로 추가돼요.</p>
+      <div className="icons">
+        {S.baseCats.map(b => {
+          const added = addedOf(b)
+          return added
+            ? <CatIcon key={b.id} cat={withImage(added, S.baseCats)} onClick={() => goCat(added.id)} />
+            : <CatIcon key={b.id} cat={b} dim badge="+" onClick={() => act.addBaseCat(b)} />
+        })}
+        {custom.map(c => <CatIcon key={c.id} cat={c} onClick={() => goCat(c.id)} />)}
+        <CatIcon cat={{ icon: '＋' }} label="새 카테고리" on={adding} onClick={() => setAdding(!adding)} />
+      </div>
+      {adding && (
+        <form className="addf col" onSubmit={create}>
+          <label>이름<input className="inp" name="name" maxLength={12} placeholder="예: 다이어트" autoFocus /></label>
+          <IconPicker value={icon} onChange={setIcon} />
+          <div className="row"><button className="btn pri">만들기</button><button type="button" className="btn" onClick={() => setAdding(false)}>취소</button></div>
+        </form>
+      )}
+    </section>
   )
 }
 
@@ -98,7 +88,7 @@ function CatPage({ id }) {
 
       <section className="sheet">
         <div className="hero">
-          <span className="cicon-c" style={{ width: 72, height: 72, fontSize: 34, borderColor: `var(--${cat.color})` }}>{catIcon(cat)}</span>
+          <CatGlyph cat={withImage(cat, S.baseCats)} size={72} />
           <div className="grow">
             <p className="nick">{cat.name}</p>
             <p className="sub">{cat.base ? '기본 카테고리' : '개별 카테고리'}{d.start ? ` · ${pretty(d.start)} 시작` : ''}</p>

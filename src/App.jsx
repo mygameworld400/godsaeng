@@ -57,13 +57,13 @@ export default function App() {
               </button>
             ))}
             {S.uid && !S.local && <button className="tab" onClick={act.signOut}>로그아웃</button>}
-            <button className="tab" role="tab" aria-selected={tab === 'settings'} aria-label="설정"
-              onClick={() => go(tab === 'settings' ? 'today' : 'settings')}>⚙️ 설정</button>
           </nav>
         </header>
         {S.local && <div className="note">지금은 미리보기 상태라 기록이 저장되지 않아요. .env.local 에 Supabase 키를 넣으면 저장되고 친구와 공유돼요.</div>}
         <main>{body}</main>
       </div>
+      <button className={'gear' + (tab === 'settings' ? ' on' : '')} aria-label="설정" title="설정"
+        onClick={() => go(tab === 'settings' ? 'today' : 'settings')}>⚙️</button>
       {S.toast && <div className="toast" role="status">{S.toast}</div>}
     </>
   )

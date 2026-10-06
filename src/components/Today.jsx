@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { today, pretty } from '../lib/date'
 import { stat, pc } from '../lib/stats'
-import { MOODS, ConfirmX, CatIcon, CatSelect, Groups, PubToggle, formVals } from './common'
+import { MOODS, ConfirmX, CatIcon, CatSelect, Groups, PubToggle, formVals, withImage } from './common'
 import Calendar from './Calendar'
 
 export default function Today() {
@@ -40,7 +40,7 @@ export default function Today() {
         <p className="sub">아이콘을 누르면 그 카테고리의 루틴과 투두만 모아 볼 수 있어요. 카테고리 추가·수정은 카테고리 탭에서 해요.</p>
         <div className="icons">
           <CatIcon cat={{ icon: '✨' }} label="전체" on={!filter} onClick={() => setFilter('')} />
-          {me.cats.map(c => <CatIcon key={c.id} cat={c} on={filter === c.id} onClick={() => setFilter(filter === c.id ? '' : c.id)} />)}
+          {me.cats.map(c => <CatIcon key={c.id} cat={withImage(c, S.baseCats)} on={filter === c.id} onClick={() => setFilter(filter === c.id ? '' : c.id)} />)}
           <CatIcon cat={{ icon: '📦' }} label="미분류" on={filter === 'none'} onClick={() => setFilter(filter === 'none' ? '' : 'none')} />
         </div>
       </section>

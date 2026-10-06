@@ -143,6 +143,14 @@ try {
   ok(made?.icon === '🧪', '관리자 목록에 새 기본 카테고리')
   ok(!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '🎯', p_color: '', p_sort: 98 })).error, '관리자가 기본 카테고리 수정')
   ok((await B.sb.from('gs_base_cats').select('*').eq('id', made?.id).single()).data?.icon === '🎯', '수정 내용이 사용자에게 보임')
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98, p_image: png })).error, '관리자가 기본 카테고리 이미지 등록')
+  ok((await B.sb.from('gs_base_cats').select('image').eq('id', made?.id).single()).data?.image === png, '사용자에게 이미지가 보임')
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98 })).error
+    && (await B.sb.from('gs_base_cats').select('image').eq('id', made?.id).single()).data?.image === png, '이미지 없이 저장하면 기존 이미지 유지')
+  ok(!!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98, p_image: 'javascript:alert(1)' })).error, '이미지가 아닌 값은 거절')
+  await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98, p_image: '' })
+  ok(!(await B.sb.from('gs_base_cats').select('image').eq('id', made?.id).single()).data?.image, '빈 값으로 저장하면 이미지 삭제')
   ok(!(await adm('gs_admin_base_cat_delete', { p_id: made?.id })).error, '관리자가 기본 카테고리 삭제')
   const details = { c1: { start: today, goal: '비밀목표', todos: [{ id: 'x', text: '비밀할일', done: false }] } }
   ok(!(await A.sb.from('gs_private').update({ cat_details: details }).eq('user_id', A.id)).error, 'A 카테고리 세부(시작일·목표·투두) 저장')
