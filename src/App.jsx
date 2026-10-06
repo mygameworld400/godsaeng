@@ -48,7 +48,7 @@ export default function App() {
 
   return (
     <>
-      <div className={'wrap' + (me ? ' with-bubble' : '')}>
+      <div className="wrap">
         <header className="top">
           <h1 className="brand"><span>갓생홈피</span></h1>
           <nav className="tabs" role="tablist" aria-label="메뉴">

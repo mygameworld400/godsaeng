@@ -9,7 +9,8 @@ export const COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 export const catIcon = c => c?.icon || '🏷️'
 
 /** 팝업. 오른쪽 위 ✕, 바깥 클릭, Esc 로 닫힌다. */
-export function Modal({ title, onClose, wide, children }) {
+/** bare: 바깥 상자 없이 화면 가득 (다이어리 책) */
+export function Modal({ title, onClose, wide, bare, children }) {
   useEffect(() => {
     const k = e => { if (e.key === 'Escape') onClose() }
     addEventListener('keydown', k)
@@ -19,9 +20,9 @@ export function Modal({ title, onClose, wide, children }) {
   }, [onClose])
   return createPortal(
     <div className="modal-bg" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={'modal' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={'modal' + (wide ? ' wide' : '') + (bare ? ' bare' : '')} role="dialog" aria-modal="true" aria-label={title}>
         <button className="modal-x" aria-label="닫기" onClick={onClose}>✕</button>
-        {title && <h2 className="modal-t"><span>{title}</span></h2>}
+        {title && !bare && <h2 className="modal-t"><span>{title}</span></h2>}
         {children}
       </div>
     </div>,

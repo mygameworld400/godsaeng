@@ -13,7 +13,8 @@ import EventForm from './EventForm'
 
 const MODE_KEY = 'godsaeng-cal-mode'
 const readMode = () => { try { return localStorage.getItem(MODE_KEY) || 'plan' } catch { return 'plan' } }
-const inRange = (e, ds) => !!e.start && e.start <= ds && ds <= e.end
+const inRange = (e, ds) => e.start <= ds && ds <= e.end
+const tm = e => e.time ? (e.endTime ? `${e.time}~${e.endTime} ` : `${e.time} `) : ''
 const md = s => s.slice(5).replace('-', '.')
 
 /** 달력 칸에 보이기/숨기기 */
@@ -36,7 +37,7 @@ export default function Calendar() {
   const [y, m] = ym.split('-').map(Number)
   const first = new Date(y, m - 1, 1).getDay(), last = new Date(y, m, 0).getDate(), t = today()
   const move = n => { const d = new Date(y, m - 1 + n, 1); setYm(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')) }
-  const evs = Object.values(S.events).filter(e => e.start).sort((a, b) => a.start < b.start ? -1 : a.start > b.start ? 1 : a.title.localeCompare(b.title))
+  const evs = Object.values(S.events).sort((a, b) => a.start < b.start ? -1 : a.start > b.start ? 1 : (a.time || '').localeCompare(b.time || '') || a.title.localeCompare(b.title))
   const plan = mode === 'plan'
 
   const cells = []
@@ -54,7 +55,7 @@ export default function Calendar() {
           ? <span className="evs">
               {dayEvs.slice(0, 2).map(e => (
                 <span key={e.id} className={'ev' + (e.start === ds ? ' s' : '') + (e.end === ds ? ' e' : '')} style={{ background: `var(--${e.color})` }}>
-                  {e.start === ds || (first + n - 1) % 7 === 0 ? e.title : ' '}
+                  {e.start === ds || (first + n - 1) % 7 === 0 ? (e.start === ds && e.time ? e.time + ' ' : '') + e.title : ' '}
                 </span>
               ))}
               {dayEvs.length > 2 && <span className="more">+{dayEvs.length - 2}</span>}
@@ -69,7 +70,7 @@ export default function Calendar() {
     <section className="sheet">
       <div className="row between">
         <h2><span>{y}년 {m}월</span>
-          <Help>{plan ? '날짜를 누르면 달력 아래에서 그날 일정을 추가·수정할 수 있어요. 여러 날 이어지는 일정(예: 7일~9일 휴가)도, 날짜 없는 일정도 돼요. 👁 를 누르면 달력 칸에서 숨기거나 다시 보이게 해요. 오른쪽 말풍선에도 그날 일정이 보여요.' : '칸마다 그날 루틴·투두 달성률이 보여요.'}</Help></h2>
+          <Help>{plan ? '날짜를 누르면 달력 아래에서 그날 일정을 추가·수정할 수 있어요. 여러 날 이어지는 일정(예: 7일~9일 휴가)도 되고, 시간도 넣을 수 있어요. 👁 를 누르면 달력 칸에서 숨기거나 다시 보이게 해요. 오른쪽 말풍선에도 그날 일정이 보여요.' : '칸마다 그날 루틴·투두 달성률이 보여요.'}</Help></h2>
         <div className="row">
           <button className="btn sm hl" onClick={() => setMode(plan ? 'rate' : 'plan')}>{plan ? '📊 달성률 보기' : '📅 일정 보기'}</button>
           <button className="btn sm" aria-label="지난달" onClick={() => move(-1)}>‹</button>
@@ -84,7 +85,6 @@ export default function Calendar() {
 
       {plan && (() => {
         const selEvs = evs.filter(e => inRange(e, S.date))
-        const undated = Object.values(S.events).filter(e => !e.start)
         return (
           <div className="evpanel">
             <h3 className="evh">{Number(S.date.slice(5, 7))}월 {Number(S.date.slice(8))}일 ({WD[toD(S.date).getDay()]}) 일정</h3>
@@ -94,26 +94,13 @@ export default function Calendar() {
               <div key={e.id} className="item">
                 <span className="cdot" style={{ background: `var(--${e.color})` }} />
                 <span className="t">{e.title}</span>
-                <span className="sub">{e.start === e.end ? md(e.start) : `${md(e.start)} ~ ${md(e.end)}`}</span>
+                <span className="sub">{tm(e)}{e.start === e.end ? md(e.start) : `${md(e.start)} ~ ${md(e.end)}`}</span>
                 <EyeBtn e={e} />
                 <button className="x" aria-label="수정" onClick={() => setEditing(e.id)}>✎</button>
                 <ConfirmX onConfirm={() => act.delEvent(e.id)} />
               </div>
             ))}
             {!editing && <EventForm date={S.date} onSave={act.addEvent} />}
-            {undated.length > 0 && <>
-              <h3 className="evh" style={{ marginTop: 6 }}>날짜 없는 일정</h3>
-              {undated.map(e => editing === e.id ? (
-                <EventForm key={e.id} init={e} date={S.date} onCancel={() => setEditing(null)} onSave={p => { act.updateEvent(e.id, p); setEditing(null) }} />
-              ) : (
-                <div key={e.id} className="item">
-                  <span className="cdot" style={{ background: `var(--${e.color})` }} />
-                  <span className="t">{e.title}</span>
-                  <button className="x" aria-label="수정" onClick={() => setEditing(e.id)}>✎</button>
-                  <ConfirmX onConfirm={() => act.delEvent(e.id)} />
-                </div>
-              ))}
-            </>}
           </div>
         )
       })()}

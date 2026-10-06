@@ -115,7 +115,7 @@ export default function Today() {
 
       <section className="sheet">
         <div className="row between">
-          <h2><button className="linkh" onClick={() => setBook(true)} title="다이어리 펼치기"><span>다이어리</span> 📔</button>
+          <h2><button className="linkh" onClick={() => setBook(true)} title="다이어리 펼치기"><span>다이어리</span></button>
             <Help>오늘 쓴 일기는 다이어리 책에 자동으로 들어가요. 제목을 누르면 다이어리가 펼쳐져요.</Help></h2>
           <div className="moods" role="group" aria-label="오늘 기분">
             {MOODS.map(m => <button key={m} className="mood" aria-pressed={d.mood === m} onClick={() => act.setMood(m)}>{m}</button>)}

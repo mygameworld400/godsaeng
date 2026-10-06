@@ -118,7 +118,7 @@ export function StoreProvider({ children }) {
       const ok = session?.user?.email?.endsWith('@godsaeng.local')
       const uid = ok ? session.user.id : null
       if (uid === S.uid) { bump(); return }
-      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {}, undatedLoaded: false, allDiaries: false, diaryCover: undefined })
+      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {}, allDiaries: false, diaryCover: undefined })
       bump()
       if (uid) loadAll().catch(e => { S.loaded = true; onErr(e) })
     }
@@ -215,26 +215,22 @@ export function StoreProvider({ children }) {
       if (S.local || S.months[ym]) return
       S.months[ym] = true
       const [y, m] = ym.split('-').map(Number), from = ym + '-01', to = ym + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0')
-      const undated = S.undatedLoaded ? Promise.resolve([]) : events.listUndated(S.uid).catch(() => [])
-      S.undatedLoaded = true
-      Promise.all([days.listMyDays(S.uid, from, to), events.listEvents(S.uid, from, to), undated]).then(([got, evs, und]) => {
+      Promise.all([days.listMyDays(S.uid, from, to), events.listEvents(S.uid, from, to)]).then(([got, evs]) => {
         for (const k in got) if (!S.days[k]) S.days[k] = got[k]
-        evs.concat(und).forEach(e => { S.events[e.id] = e })
+        evs.forEach(e => { S.events[e.id] = e })
         bump()
       }).catch(e => { delete S.months[ym]; onErr(e) })
     },
 
     /* ---------- 일정 ---------- */
-    // start 가 없으면 날짜 없는 일정
     addEvent(e) {
-      const ev = { id: crypto.randomUUID(), color: 'c4', ...e, start: e.start || null, end: e.start ? (e.end && e.end >= e.start ? e.end : e.start) : null }
+      const ev = { id: crypto.randomUUID(), color: 'c4', ...e, end: e.end && e.end >= e.start ? e.end : e.start }
       S.events[ev.id] = ev; bump()
       now(() => events.addEvent(S.uid, ev))
     },
     updateEvent(id, patch) {
       const ev = S.events[id]; if (!ev) return
-      Object.assign(ev, patch)
-      if (!ev.start) { ev.start = null; ev.end = null } else if (!ev.end || ev.end < ev.start) ev.end = ev.start
+      Object.assign(ev, patch); if (!ev.end || ev.end < ev.start) ev.end = ev.start
       bump(); now(() => events.updateEvent(id, ev))
     },
     delEvent(id) { delete S.events[id]; bump(); now(() => events.removeEvent(id)) },
