@@ -135,7 +135,7 @@ export async function makeCursor(file, { cutout = true, tolerance = 28 } = {}) {
  * 스티커 시트 나누기: 한 장에 여러 스티커가 있는 이미지 → 배경을 지우고 떨어진 그림 덩어리마다 하나씩 (PNG, 긴 쪽 ≤160px).
  * 작은 틈(몇 px)은 이어진 것으로 본다(글자·점이 한 스티커에 붙어 있게). 너무 작은 조각은 버린다.
  */
-export async function splitStickers(file, { tolerance = 28, cutout = true } = {}) {
+export async function splitStickers(file, { tolerance = 28, cutout = true, outline = 0 } = {}) {
   const img = await loadImage(file)
   const k = Math.min(1, 1600 / Math.max(img.width, img.height))
   const W = Math.max(1, Math.round(img.width * k)), H = Math.max(1, Math.round(img.height * k))
@@ -172,6 +172,18 @@ export async function splitStickers(file, { tolerance = 28, cutout = true } = {}
     out.width = Math.max(1, Math.round(b.w * s)); out.height = Math.max(1, Math.round(b.h * s))
     const o = out.getContext('2d'); o.imageSmoothingQuality = 'high'
     o.drawImage(c, b.x, b.y, b.w, b.h, 0, 0, out.width, out.height)
-    return out.toDataURL('image/png')
+    return (outline > 0 ? addOutline(out, outline) : out).toDataURL('image/png')
   })
+}
+
+/** 스티커 흰 테두리: 그림 모양을 흰색으로 칠해 사방으로 조금씩 밀어 깔고, 원래 그림을 위에 올린다 */
+function addOutline(src, r) {
+  const W = src.width + r * 2, H = src.height + r * 2
+  const white = document.createElement('canvas'); white.width = src.width; white.height = src.height
+  const w = white.getContext('2d'); w.drawImage(src, 0, 0); w.globalCompositeOperation = 'source-in'; w.fillStyle = '#fff'; w.fillRect(0, 0, src.width, src.height)
+  const out = document.createElement('canvas'); out.width = W; out.height = H
+  const o = out.getContext('2d')
+  for (let a = 0; a < 24; a++) { const t = a / 24 * Math.PI * 2; o.drawImage(white, r + Math.cos(t) * r, r + Math.sin(t) * r) }
+  o.drawImage(src, r, r)
+  return out
 }

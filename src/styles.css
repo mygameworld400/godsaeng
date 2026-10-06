@@ -485,6 +485,20 @@ html[data-cursor] :is(textarea,input:not([type=checkbox]):not([type=radio]):not(
 .sticker-corner{display:flex;flex-direction:column;gap:6px;border-top:1.5px dashed var(--line);padding-top:8px}
 .sticker-tray{display:flex;flex-wrap:wrap;gap:6px}
 .sticker-tray .sticker-pick{width:62px;height:62px}
+.nick-sub{font-size:14px;color:var(--muted);font-family:var(--f-body);margin-left:2px}
+.rings .cover.mini{height:88px}
+.rings{align-items:center}
+.cover-pop{display:flex;justify-content:center}
+.cover-pop .cover.mini{height:min(60vh,520px)}
+.cover-pop .cover.mini .cover-title{font-size:clamp(18px,3vh,32px)}
+.cover-pop .cover.mini .cover-sub{font-size:clamp(13px,2vh,20px)}
+.fold{border-top:1.5px solid var(--line);padding:4px 0}
+.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::before{content:"▸";color:var(--muted);transition:transform .2s;display:inline-block}
+.fold[open]>summary::before{transform:rotate(90deg)}
+.fold>summary h2{margin:0}
+.fold-body{display:flex;flex-direction:column;gap:12px;padding:6px 0 10px}
 .recs{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mitem{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;border-radius:12px;padding:4px 2px;border:1.5px dashed var(--line)}
 .mitem.dragging{opacity:.4}

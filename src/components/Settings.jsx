@@ -7,7 +7,7 @@ import * as questApi from '../services/questService'
 import * as bookApi from '../services/bookService'
 import * as siteApi from '../services/siteService'
 import PlanViewer from './PlanViewer'
-import { COLORS, ConfirmX, Help, Modal, avaOf, formVals } from './common'
+import { COLORS, ConfirmX, Fold, Help, Modal, avaOf, formVals } from './common'
 import { makeIcon, makeBackground, makeCover, makeCursor, splitStickers } from '../lib/cutout'
 import { readCur } from '../lib/curfile'
 import { explain } from './Login'
@@ -105,7 +105,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
     try {
       await categories.adminSaveBaseCat(code, {
         id: c?.id, name: v.name, icon: v.icon, color: v.color, sort: +v.sort || 0,
-        image: preview || (clear ? '' : undefined), kind: v.kind || 'default',
+        image: preview || (clear ? '' : undefined), kind: v.kind || 'default', subtitle: v.subtitle ?? '',
         options: opts.filter(o => o.name.trim()).map(o => ({ ...o, name: o.name.trim() })),
       })
       toast(c ? '저장했어요.' : '기본 활동을 추가했어요.')
@@ -130,6 +130,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
         <div className="addf">
           <input className="inp" name="icon" defaultValue={c?.icon || ''} maxLength={4} placeholder="🏷️" aria-label="이모지 (이미지가 없을 때)" title="이미지가 없을 때 쓰는 이모지" style={{ flex: '0 0 64px' }} />
           <input className="inp" name="name" defaultValue={c?.name || ''} maxLength={12} placeholder="활동 이름" aria-label="이름" required />
+          <input className="inp" name="subtitle" defaultValue={c?.subtitle || ''} maxLength={20} placeholder="부제 (선택, 예: 드라마)" aria-label="부제" title="활동 페이지 제목 옆에 작게 보여요" style={{ flex: '0 0 130px' }} />
           <select className="inp" name="color" defaultValue={c?.color || 'c1'} aria-label="색">
             {COLORS.map((k, i) => <option key={k} value={k}>색 {i + 1}</option>)}
           </select>
@@ -139,6 +140,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
             <option value="ledger">페이지: 가계부</option>
             <option value="reading">페이지: 독서</option>
             <option value="workout">페이지: 운동</option>
+            <option value="media">페이지: 영화·드라마</option>
           </select>
         </div>
         {file && (
@@ -174,7 +176,7 @@ function PlanTest({ code, toast }) {
   const save = v => { setPg(v); writeTest(open.id, v) }
   return (
     <>
-      <h2><span>플랜 템플릿</span><Help>활동에 붙일 공부 플랜이에요. 테스트 모드는 실제 내 활동이 아니라서, 진도와 점수가 이 브라우저에만 저장되고 다른 사람에게 보이지 않아요.</Help></h2>
+      <Fold head={<><span>플랜 템플릿</span><Help>활동에 붙일 공부 플랜이에요. 테스트 모드는 실제 내 활동이 아니라서, 진도와 점수가 이 브라우저에만 저장되고 다른 사람에게 보이지 않아요.</Help></>}>
       {!list ? <p className="empty">불러오는 중…</p> : list.length ? list.map(t => (
         <div className="person" key={t.id}>
           <div className="nm" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}><b>{t.title}</b><small className="sub">{t.days}일 · {t.summary}</small></div>
@@ -192,6 +194,7 @@ function PlanTest({ code, toast }) {
             onSave={async data => { try { await plans.adminSavePlan(code, open.id, data); setOpen({ ...open, tpl: data }); toast('템플릿을 저장했어요.') } catch (e) { toast(explain(e)); throw e } }} />
         </Modal>
       )}
+    </Fold>
     </>
   )
 }
@@ -248,11 +251,12 @@ function AdminQuests({ code, baseCats, toast, refresh }) {
   const done = () => { load(); refresh() }
   return (
     <>
-      <h2><span>챌린지</span><Help>플랜 템플릿을 여러 사람이 함께 하는 챌린지예요. 연결한 추천 활동(예: 언어 → 일본어) 옆에 보이고, 참여하면 그 활동이 참여자 활동에 담겨요.</Help></h2>
+      <Fold head={<><span>챌린지</span><Help>플랜 템플릿을 여러 사람이 함께 하는 챌린지예요. 연결한 추천 활동(예: 언어 → 일본어) 옆에 보이고, 참여하면 그 활동이 참여자 활동에 담겨요.</Help></>}>
       {!list ? <p className="empty">불러오는 중…</p> : <div className="stack" style={{ gap: 10 }}>
         {list.map(q => <QuestForm key={q.id + q.title + q.templateId + q.baseId + q.optionId + q.sort + q.description} q={q} code={code} baseCats={baseCats} plansList={plansList} onDone={done} toast={toast} />)}
         <QuestForm code={code} baseCats={baseCats} plansList={plansList} onDone={done} toast={toast} />
       </div>}
+    </Fold>
     </>
   )
 }
@@ -279,12 +283,13 @@ function Backup({ code, toast }) {
   }
   return (
     <>
-      <h2><span>데이터 백업</span><Help>갓생홈피의 모든 기록(프로필·루틴·투두·일기·일정·활동·챌린지 진도·템플릿)을 파일 하나로 내려받아요. 로그인 비밀번호와 입장·관리자 코드는 들어가지 않아요. 이 파일이 있으면 문제가 생겨도 되살릴 수 있어요.</Help></h2>
+      <Fold head={<><span>데이터 백업</span><Help>갓생홈피의 모든 기록(프로필·루틴·투두·일기·일정·활동·챌린지 진도·템플릿)을 파일 하나로 내려받아요. 로그인 비밀번호와 입장·관리자 코드는 들어가지 않아요. 이 파일이 있으면 문제가 생겨도 되살릴 수 있어요.</Help></>}>
       <div className="row">
         <button className="btn pri sm" disabled={busy} onClick={run}>{busy ? '만드는 중…' : '💾 백업 파일 내려받기'}</button>
         <span className="sub">{last ? `마지막 백업: ${localDateTime(last)} (${days}일 전)` : '아직 이 브라우저에서 백업한 적이 없어요.'}</span>
         {days !== null && days >= 7 && <span className="pill">백업할 때가 됐어요</span>}
       </div>
+    </Fold>
     </>
   )
 }
@@ -345,7 +350,7 @@ function BookRequests({ code, toast }) {
   }
   return (
     <>
-      <h2><span>책 표지 요청</span><Help>북 컬렉션에 표지 없이 담긴 책이에요. 표지 사진을 올리면 그 사람 컬렉션에 바로 보여요.</Help></h2>
+      <Fold head={<><span>표지·포스터 요청</span><Help>북 컬렉션·영화 컬렉션에 표지 없이 담긴 것들이에요. 사진을 올리면 그 사람 컬렉션에 바로 보여요.</Help></>}>
       {!list ? <p className="empty">불러오는 중…</p> : list.length ? list.map(b => (
         <div className="person" key={b.id}>
           <div className="nm" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
@@ -354,6 +359,7 @@ function BookRequests({ code, toast }) {
           <label className="btn sm pri">표지 올리기<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload(b, f) }} /></label>
         </div>
       )) : <p className="empty">표지를 기다리는 책이 없어요.</p>}
+    </Fold>
     </>
   )
 }
@@ -366,6 +372,18 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
   const [site, setSite] = useState(null)
   const [pieces, setPieces] = useState([])   // 스티커 시트에서 찾은 조각 [{ img, on }]
   const [cut, setCut] = useState(true)
+  const [sheet, setSheet] = useState(null)   // 스티커 시트 파일
+  const [sOpt, setSOpt] = useState({ cutout: true, tolerance: 28, outline: 0 })
+  const [busy, setBusy] = useState(false)
+  // 시트나 옵션이 바뀌면 다시 자른다
+  useEffect(() => {
+    if (!sheet) return
+    let live = true
+    setBusy(true)
+    splitStickers(sheet, sOpt).then(imgs => { if (!live) return; setPieces(imgs.map(img => ({ img, on: true }))); if (!imgs.length) toast('스티커를 찾지 못했어요. 강도를 바꾸거나 배경 제거를 꺼 보세요.') })
+      .catch(e => toast(e.message)).finally(() => live && setBusy(false))
+    return () => { live = false }
+  }, [sheet, sOpt, toast])
   const load = () => siteApi.adminLoadSite(code).then(setSite).catch(e => { setSite({}); toast(explain(e)) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [code])
@@ -378,7 +396,7 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
   const file = (fn) => e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) fn(f).catch(err => toast(err.message)) }
 
   return <>
-    <h2><span>위블</span><Help>위블로 지정한 계정에게만 화면 왼쪽 위에 아이콘이 보이고, 누르면 링크로 이동해요.</Help></h2>
+    <Fold head={<><span>위블</span><Help>위블로 지정한 계정에게만 화면 왼쪽 위에 아이콘이 보이고, 누르면 링크로 이동해요.</Help></>}>
     <div className="set-row"><span className="sub">아이콘</span>
       <span className="checker sm">{weble.icon ? <img src={weble.icon} alt="" /> : '🔗'}</span>
       <label className="btn sm">이미지 올리기<input type="file" accept="image/*" hidden onChange={file(async f => save('weble', { ...weble, icon: await makeIcon(f, { cutout: true }) }, '위블 아이콘을 바꿨어요.'))} /></label>
@@ -394,7 +412,8 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
       }) : <span className="sub">계정이 없어요.</span>}
     </div>
 
-    <h2><span>커서</span><Help>.cur 파일은 그대로(클릭 지점 포함) 쓰고, 일반 이미지는 배경을 지우고 40px 로 줄여요. 올린 커서는 모두가 화면 설정에서 골라 쓸 수 있어요. 움직이는 커서(.ani)는 브라우저가 지원하지 않아요.</Help></h2>
+    </Fold>
+    <Fold head={<><span>커서</span><Help>.cur 파일은 그대로(클릭 지점 포함) 쓰고, 일반 이미지는 배경을 지우고 40px 로 줄여요. 올린 커서는 모두가 화면 설정에서 골라 쓸 수 있어요. 움직이는 커서(.ani)는 브라우저가 지원하지 않아요.</Help></>}>
     <div className="set-row">
       <label className="toggle"><input type="checkbox" checked={cut} onChange={e => setCut(e.target.checked)} /> 배경 자동 제거</label>
       <label className="btn sm pri">커서 올리기 (.cur · 이미지)<input type="file" accept=".cur,.ico,image/*" hidden onChange={file(async f => {
@@ -409,24 +428,34 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
         <ConfirmX onConfirm={() => save('cursors', cursors.filter(x => x.id !== c.id))} /></span>
     ))}</div>
 
-    <h2><span>스티커</span><Help>스티커 여러 개가 한 장에 있는 이미지를 올리면 배경을 지우고 하나씩 잘라 줘요. 쓸 것만 골라 추가하세요. 스티커끼리 떨어져 있을수록 잘 잘려요.</Help></h2>
+    </Fold>
+    <Fold head={<><span>스티커</span><Help>스티커 여러 개가 한 장에 있는 이미지를 올리면 배경을 지우고 하나씩 잘라 줘요. 강도·흰 테두리를 바꾸면 바로 다시 잘라 보여 줘요. 배경이 투명한 PNG 시트라면 배경 제거를 끄는 게 가장 깔끔해요.</Help></>}>
     <div className="set-row">
-      <label className="btn sm pri">스티커 시트 올리기<input type="file" accept="image/*" hidden onChange={file(async f => { const imgs = await splitStickers(f, { cutout: cut }); setPieces(imgs.map(img => ({ img, on: true }))); if (!imgs.length) toast('스티커를 찾지 못했어요. 배경이 단순한 이미지로 해 주세요.') })} /></label>
-      <span className="sub">배경 자동 제거는 위 커서 설정과 같이 써요.</span>
+      <label className="btn sm pri">스티커 시트 올리기<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setSheet(f) }} /></label>
+      {sheet && <span className="sub">{sheet.name}</span>}
     </div>
+    {sheet && (
+      <div className="set-row">
+        <label className="toggle"><input type="checkbox" checked={sOpt.cutout} onChange={e => setSOpt({ ...sOpt, cutout: e.target.checked })} /> 배경 제거</label>
+        {sOpt.cutout && <label className="toggle">강도 <input type="range" min={5} max={90} value={sOpt.tolerance} onChange={e => setSOpt({ ...sOpt, tolerance: +e.target.value })} /> {sOpt.tolerance}</label>}
+        <label className="toggle">흰 테두리 <input type="range" min={0} max={8} value={sOpt.outline} onChange={e => setSOpt({ ...sOpt, outline: +e.target.value })} /> {sOpt.outline}px</label>
+      </div>
+    )}
+    {busy && <p className="sub">자르는 중…</p>}
     {pieces.length > 0 && <>
       <p className="sub">{pieces.length}개를 찾았어요. 쓸 것만 남겨 주세요.</p>
       <div className="sticker-grid">{pieces.map((p, i) => (
         <button key={i} className={'sticker-pick' + (p.on ? ' on' : '')} onClick={() => setPieces(pieces.map((x, j) => j === i ? { ...x, on: !x.on } : x))}><img src={p.img} alt="" /></button>
       ))}</div>
       <div className="row">
-        <button className="btn pri sm" onClick={async () => { await save('stickers', [...stickers, ...pieces.filter(p => p.on).map(p => ({ id: sid(), image: p.img }))], '스티커를 추가했어요.'); setPieces([]) }}>골라진 {pieces.filter(p => p.on).length}개 추가</button>
-        <button className="btn sm" onClick={() => setPieces([])}>취소</button>
+        <button className="btn pri sm" onClick={async () => { await save('stickers', [...stickers, ...pieces.filter(p => p.on).map(p => ({ id: sid(), image: p.img }))], '스티커를 추가했어요.'); setPieces([]); setSheet(null) }}>골라진 {pieces.filter(p => p.on).length}개 추가</button>
+        <button className="btn sm" onClick={() => { setPieces([]); setSheet(null) }}>취소</button>
       </div>
     </>}
     <div className="sticker-grid">{stickers.map(st => (
       <span key={st.id} className="sticker-pick on"><img src={st.image} alt="" /><ConfirmX onConfirm={() => save('stickers', stickers.filter(x => x.id !== st.id))} /></span>
     ))}</div>
+    </Fold>
   </>
 }
 
@@ -471,17 +500,19 @@ export default function Settings() {
               {msg && <p className="sub" role="alert" style={{ flexBasis: '100%' }}>{msg}</p>}
             </form>
           ) : <>
-            <p className="sub">가입한 계정 {list.length}개 <Help>아이디·닉네임·비밀번호를 바꾸거나 계정을 지울 수 있어요. 지운 계정의 기록은 되살릴 수 없어요.</Help></p>
+            <Fold head={<><span>계정</span><small className="sub"> {list.length}개</small><Help>아이디·닉네임·비밀번호를 바꾸거나 계정을 지울 수 있어요. 지운 계정의 기록은 되살릴 수 없어요.</Help></>}>
             <div>
               {list.length ? list.map(a => (
                 <AccountRow key={a.id} a={a} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
               )) : <p className="empty">아직 가입한 계정이 없어요.</p>}
             </div>
-            <h2><span>기본 활동</span><Help>모두에게 보이는 기본 활동이에요. 각자 활동 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</Help></h2>
+            </Fold>
+            <Fold head={<><span>기본 활동</span><Help>모두에게 보이는 기본 활동이에요. 각자 활동 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</Help></>}>
             <div className="stack" style={{ gap: 10 }}>
-              {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.kind + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
+              {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.kind + c.subtitle + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
+            </Fold>
             <Backup code={code} toast={act.toast} />
             <SiteAdmin code={code} accounts={list} toast={act.toast} refresh={act.refresh} />
             <BookRequests code={code} toast={act.toast} />

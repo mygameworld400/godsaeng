@@ -30,6 +30,16 @@ export function Modal({ title, onClose, wide, bare, children }) {
   )
 }
 
+/** 접고 펴는 칸 (기본은 접힘). 제목을 누르면 열리고 한 번 더 누르면 접힌다. */
+export function Fold({ head, children }) {
+  return (
+    <details className="fold">
+      <summary><h2>{head}</h2></summary>
+      <div className="fold-body">{children}</div>
+    </details>
+  )
+}
+
 /** 작은 ? 아이콘. 마우스를 올리면(또는 키보드 포커스) 설명이 뜬다. 클릭 동작 없음. */
 export function Help({ children }) {
   return (

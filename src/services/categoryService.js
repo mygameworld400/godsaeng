@@ -1,6 +1,6 @@
 import { supabase, unwrap } from '../lib/supabase'
 
-const toApp = r => ({ id: r.id, name: r.name, icon: r.icon, color: r.color, sort: r.sort, image: r.image || '', options: r.options || [], kind: r.page_kind || 'default' })
+const toApp = r => ({ id: r.id, name: r.name, icon: r.icon, color: r.color, sort: r.sort, image: r.image || '', options: r.options || [], kind: r.page_kind || 'default', subtitle: r.subtitle || '' })
 
 /** 관리자가 정해 둔 기본 활동 (멤버만 읽힘) */
 export async function listBaseCats() {
@@ -18,6 +18,7 @@ export async function adminSaveBaseCat(code, c) {
     p_image: c.image === undefined ? null : c.image,
     p_options: c.options === undefined ? null : c.options,
     ...(c.kind ? { p_kind: c.kind } : {}),
+    ...(c.subtitle !== undefined ? { p_subtitle: c.subtitle } : {}),
   }))
 }
 export async function adminDeleteBaseCat(code, id) {

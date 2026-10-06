@@ -149,7 +149,7 @@ function CatPage({ id }) {
   const linked = S.quests.filter(q => q.baseId === cat.base && (q.optionId || null) === (cat.opt || null))
   const d = act.catDetail(id), done = d.todos.filter(t => t.done).length
   // 추천 활동이 '가계부' 페이지면 기본 구성(시작 날짜·목표·투두) 대신 가계부
-  const kind = S.baseCats.find(b => b.id === cat.base)?.kind
+  const baseCat = S.baseCats.find(b => b.id === cat.base), kind = baseCat?.kind
   const isLedger = kind === 'ledger'
   const isBase = !!cat.base  // 기본 활동은 이름·아이콘을 관리자가 정한다 (빼기만 가능)
   const routines = S.me.routines.filter(r => r.cat === id)
@@ -187,7 +187,7 @@ function CatPage({ id }) {
         <div className="hero">
           <CatGlyph cat={withImage(cat, S.baseCats)} size={72} />
           <div className="grow">
-            <p className="nick">{cat.name}</p>
+            <p className="nick">{cat.name}{baseCat?.subtitle && <small className="nick-sub"> · {baseCat.subtitle}</small>}</p>
             <p className="sub">{d.start ? `${pretty(d.start)} 시작` : '시작 날짜 미정'}</p>
           </div>
           {isBase
@@ -252,7 +252,7 @@ function CatPage({ id }) {
           {routines.map(r => <div key={r.id} className="item ro"><span className="mark">↻</span><span className="t">{r.text}</span></div>)}
         </section>
       )}
-        {kind === 'reading' && <Books cat={cat} />}
+        {(kind === 'reading' || kind === 'media') && <Books cat={cat} kind={kind} />}
         {kind === 'workout' && <WorkoutCal cat={cat} />}
       </>}
     </div>
