@@ -200,6 +200,12 @@ try {
   ok(!!(await B.sb.from('gs_quest_members').insert({ quest_id: qid.data, user_id: A.id })).error, 'B 가 A 이름으로 참여 못 함')
   ok(!(await adm('gs_admin_quest_delete', { p_id: qid.data })).error, '관리자가 챌린지 삭제 (참여 기록도 함께)')
 
+  console.log('백업')
+  ok((await client().rpc('gs_admin_backup', { p_code: 'wrong' })).error?.message.includes('bad_admin'), '관리자 코드 없이 백업 불가')
+  const bk = await adm('gs_admin_backup', {})
+  ok(!bk.error && bk.data?.app === 'godsaeng' && bk.data.gs_profiles.some(p => p.id === A.id), '관리자 백업에 전체 데이터가 들어 있음')
+  ok(!JSON.stringify(bk.data || {}).includes(env.GS_ENTRY_CODE + '"') && !('gs_secrets' in (bk.data || {})), '백업에 비밀값은 없음')
+
   console.log('외부인')
   const anon = await client().from('gs_days').select('*')
   ok(anon.data?.length === 0, '로그인 안 하면 아무것도 안 보임')

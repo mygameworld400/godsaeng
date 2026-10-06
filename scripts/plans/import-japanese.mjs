@@ -4,7 +4,8 @@
 //   운영 방식: 월~목 개인 공부(지난 수업 시험 → 복습+오답노트 → 오늘 공부 → 일일 테스트), 금요일 모임
 //   시험은 배운 것 전부(원래 문항 + 해당 범위 단어·예문 전부). 짝 연습은 넣지 않는다.
 //   --dry 이면 업로드하지 않고 scripts/plans/out/japanese-12w.json 만 쓴다 (out/ 는 gitignore).
-// 자료 원문은 저장소에 넣지 않는다. 업로드에는 .env.local(키) + .env.test.local(GS_ADMIN_CODE) 필요.
+// 자료 원문은 저장소에 넣지 않는다.
+// 주의: 업로드는 DB 템플릿을 통째로 덮어쓴다. 관리자 화면에서 편집한 내용이 있으면 사라지니, 그때는 바꿀 부분만 고쳐서 저장할 것. 업로드에는 .env.local(키) + .env.test.local(GS_ADMIN_CODE) 필요.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -120,17 +121,21 @@ const days = rawDays.map(d => {
     if (d.speaking) add({ type: 'text', title: '주간 말하기', body: d.speaking })
     add({ type: 'notes', title: '오답노트', body: '주간시험에서 틀린 문제를 적고, 맞는 답과 왜 틀렸는지 같이 적어요.' })
   } else {
-    add({ type: 'heading', title: d.day === 1 ? '① 시작 점검' : '① 지난 수업 시험' })
-    add({ type: 'quiz', title: d.day === 1 ? '시작 점검' : '지난 수업 시험', items: qs })
-    add({ type: 'heading', title: '② 지난 수업 복습 + 오답노트' })
-    add({ type: 'notes', title: '오답노트', body: '지난 수업 시험에서 틀린 문제를 적고, 맞는 답과 왜 틀렸는지 같이 적어요. 지난 Day 단어·예문을 가리고 다시 떠올려 보세요.' })
-    add({ type: 'heading', title: '③ 오늘 공부' })
+    // Day 1 은 시작 점검·복습 없이 오늘 공부부터 (2026-10 사용자 결정)
+    const first = d.day === 1, n = k => '①②③④'[first ? k - 3 : k - 1]
+    if (!first) {
+      add({ type: 'heading', title: '① 지난 수업 시험' })
+      add({ type: 'quiz', title: '지난 수업 시험', items: qs })
+      add({ type: 'heading', title: '② 지난 수업 복습 + 오답노트' })
+      add({ type: 'notes', title: '오답노트', body: '지난 수업 시험에서 틀린 문제를 적고, 맞는 답과 왜 틀렸는지 같이 적어요. 지난 Day 단어·예문을 가리고 다시 떠올려 보세요.' })
+    }
+    add({ type: 'heading', title: n(3) + ' 오늘 공부' })
     if (d.explain) add({ type: 'text', title: '오늘의 설명', body: d.explain })
     if (d.sounds.length) add({ type: 'sounds', title: '소리표', items: d.sounds })
     if (d.words.length) add({ type: 'words', title: '단어', items: d.words })
     if (d.examples.length) add({ type: 'examples', title: '예문', items: d.examples })
     const dt = dailyTest(d)
-    if (dt.length) { add({ type: 'heading', title: '④ 일일 테스트' }); add({ type: 'quiz', title: '일일 테스트', items: dt }) }
+    if (dt.length) { add({ type: 'heading', title: n(4) + ' 일일 테스트' }); add({ type: 'quiz', title: '일일 테스트', items: dt }) }
   }
   if (d.homework || d.common) add({ type: 'text', title: '오늘 숙제', body: [d.homework, d.common && '공통: ' + d.common].filter(Boolean).join('\n\n') })
   return { day: d.day, week: d.week, weekdayKo: d.weekdayKo, title: d.title, kind: d.kind, goal: d.goal, blocks }
@@ -144,7 +149,7 @@ const data = {
 }
 
 // 검증: 60일, 모든 Day 에 시험 문항
-const missing = days.filter(d => !d.blocks.some(b => b.type === 'quiz' && b.items.length)).map(d => d.day)
+const missing = days.filter(d => !d.blocks.some(b => b.type === 'quiz' && b.items.length)).map(d => d.day)  // Day 1 도 일일 테스트가 있다
 console.log(`Day ${days.length}개, 원 시험 ${Object.values(quiz).flat().length}문항, 카드 ${cards.length}장, 개요 ${intro.length}절, 자료 ${refs.length}개`)
 console.log(`일일 테스트 ${days.flatMap(d => d.blocks.filter(b => b.title === '일일 테스트')).flatMap(b => b.items).length}문항, 금요일 ${days.filter(d => d.kind === 'test').length}일`)
 if (days.length !== 60 || missing.length) { console.error('확인 필요 — 시험 없는 Day:', missing); process.exit(1) }

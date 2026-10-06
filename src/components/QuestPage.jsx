@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../hooks/useStore'
-import { CatGlyph, ConfirmX, Help, Modal, avaOf, nickOf, withImage } from './common'
+import { CatGlyph, ConfirmX, Help, avaOf, nickOf, withImage } from './common'
 import Md from './Md'
 import PlanViewer, { normalize } from './PlanViewer'
 
@@ -15,12 +15,48 @@ export function questCat(q, baseCats) {
   return withImage({ name: o ? o.name : b.name, icon: (o && o.icon) || b.icon, color: b.color, base: b.id, opt: o?.id }, baseCats)
 }
 
+/** 챌린지에 연결된 템플릿 불러오기 */
+function useQuestTemplate(q) {
+  const { act } = useStore()
+  const [tpl, setTpl] = useState(null)
+  useEffect(() => { if (q?.templateId) act.getTemplate(q.templateId).then(t => setTpl(t ? normalize(t) : null)).catch(() => {}) }, [q?.templateId, act])
+  return tpl
+}
+
+const openPlan = id => { location.hash = 'cats/plan:' + id }
+
+/** 챌린지 플랜 전체 화면 (팝업 대신). 진도는 내 참여 기록에 저장되고 '모두' 탭에서 참여자끼리 서로 본다. */
+export function PlanScreen({ id, back }) {
+  const { S, act } = useStore()
+  const q = S.quests.find(x => x.id === id)
+  const tpl = useQuestTemplate(q)
+  const mine = q?.members.find(m => m.userId === S.uid)
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+  const people = q ? q.members.map(m => ({ id: m.userId, nick: nickOf(S, m.userId), ava: avaOf(S, m.userId), progress: m.progress })) : []
+  return (
+    <div className="plan-screen">
+      <div className="plan-bar">
+        <button className="btn sm" onClick={back}>‹ 돌아가기</button>
+        <b>{q ? q.title : '챌린지'}</b>
+      </div>
+      <div className="plan-body">
+        {!q ? <p className="empty">챌린지를 찾지 못했어요.</p>
+          : !mine ? <div className="sheet"><p className="empty">참여한 사람만 플랜을 열 수 있어요.</p><div className="row"><button className="btn pri" onClick={() => act.joinQuest(q)}>참여하기</button></div></div>
+          : !tpl ? <p className="empty">플랜을 불러오는 중…</p>
+          : <PlanViewer tpl={tpl} progress={mine.progress} setProgress={v => act.setQuestProgress(q, v)} people={people} />}
+      </div>
+    </div>
+  )
+}
+
 export default function QuestPage({ id, back }) {
   const { S, act } = useStore()
   const q = S.quests.find(x => x.id === id)
-  const [tpl, setTpl] = useState(null)
-  const [plan, setPlan] = useState(false)
-  useEffect(() => { if (q?.templateId) act.getTemplate(q.templateId).then(t => setTpl(t ? normalize(t) : null)).catch(() => {}) }, [q?.templateId, act])
+  const tpl = useQuestTemplate(q)
 
   if (!q) return <div className="sheet"><p className="empty">챌린지를 찾지 못했어요.</p><div className="row"><button className="btn" onClick={back}>‹ 돌아가기</button></div></div>
   const cat = questCat(q, S.baseCats)
@@ -39,7 +75,7 @@ export default function QuestPage({ id, back }) {
           </div>
           {mine
             ? <div className="row">
-                <button className="btn pri" onClick={() => setPlan(true)} disabled={!tpl}>📖 플랜 열기</button>
+                <button className="btn pri" onClick={() => openPlan(q.id)}>📖 플랜 열기</button>
                 <ConfirmX onConfirm={() => act.leaveQuest(q)} label="나가기" className="btn sm" />
               </div>
             : <button className="btn pri" onClick={() => act.joinQuest(q)}>참여하기</button>}
@@ -65,11 +101,6 @@ export default function QuestPage({ id, back }) {
         </section>
       )}
 
-      {plan && tpl && mine && (
-        <Modal wide title={q.title} onClose={() => setPlan(false)}>
-          <PlanViewer tpl={tpl} progress={mine.progress} setProgress={v => act.setQuestProgress(q, v)} people={people} />
-        </Modal>
-      )}
     </div>
   )
 }

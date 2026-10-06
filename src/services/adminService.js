@@ -16,3 +16,8 @@ export async function updateAccount(code, id, { login, nick, password }) {
 export async function deleteAccount(code, id) {
   unwrap(await supabase.rpc('gs_admin_delete', { p_code: code, p_id: id }))
 }
+
+/** 전체 백업 JSON (비밀값·비밀번호 제외) */
+export async function backup(code) {
+  return unwrap(await supabase.rpc('gs_admin_backup', { p_code: code }))
+}

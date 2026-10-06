@@ -289,7 +289,7 @@ export default function PlanViewer({ tpl: raw, progress, setProgress, onSave, pe
   const d = tpl.days.find(x => x.day === pg.day) || tpl.days[0]
   const both = x => pg.study[x] && pg.hw[x]
   const doneN = tpl.days.filter(x => both(x.day)).length
-  const go = day => { setProgress({ ...pg, day }); setTab('day'); document.querySelector('.modal')?.scrollTo?.({ top: 0 }) }
+  const go = day => { setProgress({ ...pg, day }); setTab('day'); document.querySelector('.plan-screen, .modal')?.scrollTo?.({ top: 0 }) }
   const updDay = nd => setDraft({ ...tpl, days: tpl.days.map(x => x.day === nd.day ? nd : x) })
   const save = async () => { setSaving(true); try { await onSave(draft); setDraft(null) } finally { setSaving(false) } }
 

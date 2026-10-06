@@ -248,6 +248,38 @@ function AdminQuests({ code, baseCats, toast, refresh }) {
   )
 }
 
+/* 백업: 버튼 한 번으로 전체 데이터를 JSON 파일로 내려받는다. 마지막으로 받은 날은 이 브라우저에 기억. */
+const BK_KEY = 'godsaeng-last-backup'
+function Backup({ code, toast }) {
+  const [last, setLast] = useState(() => { try { return localStorage.getItem(BK_KEY) || '' } catch { return '' } })
+  const [busy, setBusy] = useState(false)
+  const days = last ? Math.floor((Date.now() - new Date(last)) / 864e5) : null
+  const run = async () => {
+    setBusy(true)
+    try {
+      const data = await admin.backup(code)
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
+      const a = document.createElement('a'), d = new Date()
+      a.href = URL.createObjectURL(blob)
+      a.download = `godsaeng-backup-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000)
+      const now = d.toISOString(); setLast(now); try { localStorage.setItem(BK_KEY, now) } catch { /* 무시 */ }
+      toast('백업 파일을 내려받았어요.')
+    } catch (err) { toast(explain(err)) }
+    setBusy(false)
+  }
+  return (
+    <>
+      <h2><span>데이터 백업</span><Help>갓생홈피의 모든 기록(프로필·루틴·투두·일기·일정·활동·챌린지 진도·템플릿)을 파일 하나로 내려받아요. 로그인 비밀번호와 입장·관리자 코드는 들어가지 않아요. 이 파일이 있으면 문제가 생겨도 되살릴 수 있어요.</Help></h2>
+      <div className="row">
+        <button className="btn pri sm" disabled={busy} onClick={run}>{busy ? '만드는 중…' : '💾 백업 파일 내려받기'}</button>
+        <span className="sub">{last ? `마지막 백업: ${localDateTime(last)} (${days}일 전)` : '아직 이 브라우저에서 백업한 적이 없어요.'}</span>
+        {days !== null && days >= 7 && <span className="pill">백업할 때가 됐어요</span>}
+      </div>
+    </>
+  )
+}
+
 export default function Settings() {
   const { S, act } = useStore()
   const [code, setCode] = useState('')
@@ -293,6 +325,7 @@ export default function Settings() {
               {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
+            <Backup code={code} toast={act.toast} />
             <AdminQuests code={code} baseCats={baseCats} toast={act.toast} refresh={act.refresh} />
             <PlanTest code={code} toast={act.toast} />
           </>}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
 import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, Modal, catIcon, formVals, withImage } from './common'
-import QuestPage, { questCat } from './QuestPage'
+import QuestPage, { PlanScreen, questCat } from './QuestPage'
 
 /* 활동 탭. 내 활동(담은 기본 + 직접 만든 개별)을 내가 정한 순서로 한 목록에 보여 준다.
    기본 활동(관리자가 정한 것)은 '추천 활동' 버튼을 눌러야 보이고, 눌러서 담는다.
@@ -162,7 +162,13 @@ function CatPage({ id }) {
 
       {linked.length > 0 && (
         <div className="cat-modes">
-          {linked.map(q => <button key={q.id} className="mode-btn" onClick={() => goCat('q:' + q.id)}>🏆 <b>챌린지</b><small>{q.title}</small></button>)}
+          {linked.map(q => {
+            const joined = q.members.some(m => m.userId === S.uid)
+            return [
+              <button key={q.id} className="mode-btn" onClick={() => goCat('q:' + q.id)}>🏆 <b>챌린지</b><small>{q.title}{joined ? ' · 참여 중' : ''}</small></button>,
+              joined && <button key={q.id + 'p'} className="mode-btn pri" onClick={() => goCat('plan:' + q.id)}>📖 <b>플랜 열기</b><small>{q.title} 이어서 하기</small></button>,
+            ]
+          })}
           <button className="mode-btn" onClick={() => setHelper(true)}>📘 <b>개인공부 도우미</b><small>나만의 공부 계획</small></button>
         </div>
       )}
@@ -241,6 +247,7 @@ function CatPage({ id }) {
 }
 
 export default function Categories({ catId }) {
+  if (catId?.startsWith('plan:')) return <PlanScreen key={catId} id={catId.slice(5)} back={() => history.length > 1 ? history.back() : goCat()} />
   if (catId?.startsWith('q:')) return <QuestPage key={catId} id={catId.slice(2)} back={() => history.length > 1 ? history.back() : goCat()} />
   return catId ? <CatPage key={catId} id={catId} /> : <CatList />
 }
