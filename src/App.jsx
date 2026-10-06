@@ -5,12 +5,11 @@ import Onboard from './components/Onboard'
 import Today from './components/Today'
 import Hompy from './components/Hompy'
 import Friends from './components/Friends'
-import Bets from './components/Bets'
 import Settings from './components/Settings'
 import Categories from './components/Categories'
 import ScheduleBubble from './components/ScheduleBubble'
 
-const TABS = [['today', '오늘'], ['cats', '활동'], ['hompy', '미니홈피'], ['friends', '친구'], ['bets', '내기']]
+const TABS = [['today', '오늘'], ['cats', '활동'], ['hompy', '미니홈피'], ['friends', '친구']]
 // 'cats/<id>' 는 활동 페이지
 const fromHash = () => { const h = decodeURIComponent(location.hash.slice(1)); return h === 'settings' || h.startsWith('cats/') || TABS.some(t => t[0] === h) ? h : 'today' }
 
@@ -24,15 +23,25 @@ export default function App() {
     return () => removeEventListener('hashchange', on)
   }, [])
 
+  // 화면 설정(각자): 배경 색·무늬·이미지, 제목 형광펜 색·모양 → html 의 CSS 변수·data 속성
+  const ui = S.ui || {}
+  useEffect(() => {
+    const r = document.documentElement, st = r.style
+    if (ui.bg) { st.setProperty('--bg', ui.bg); st.setProperty('--grid', `color-mix(in srgb, ${ui.bg} 86%, #1B2440)`) } else { st.removeProperty('--bg'); st.removeProperty('--grid') }
+    if (ui.mark) st.setProperty('--mark', ui.mark); else st.removeProperty('--mark')
+    r.dataset.bgpat = ui.pattern || 'grid'
+    r.dataset.mark = ui.markStyle || 'pen'
+    if (ui.image) { st.setProperty('--bgimg', `url("${ui.image}")`); r.dataset.bgimg = '1' } else { st.removeProperty('--bgimg'); delete r.dataset.bgimg }
+  }, [ui.bg, ui.mark, ui.pattern, ui.markStyle, ui.image])
+
   const go = k => {
     setTab(k)
     try { history.replaceState(null, '', '#' + k) } catch { /* 미리보기 iframe 등 */ }
     if (k === 'hompy' && !S.view) act.view(S.uid)
-    if (k === 'friends' || k === 'bets') act.refresh()
+    if (k === 'friends') act.refresh()
   }
 
   const me = S.me
-  const invites = me ? Object.values(S.ch).filter(c => c.members?.[S.uid] === 'invited').length : 0
   const added = me ? Object.keys(S.people).filter(id => id !== S.uid && (S.people[id].friends || []).includes(S.uid) && !me.friends.includes(id)).length : 0
 
   let body
@@ -43,8 +52,7 @@ export default function App() {
   else if (tab === 'today') body = <Today />
   else if (tab === 'cats' || tab.startsWith('cats/')) body = <Categories catId={tab.slice(5)} />
   else if (tab === 'hompy') body = <Hompy />
-  else if (tab === 'friends') body = <Friends />
-  else body = <Bets />
+  else body = <Friends />
 
   return (
     <>
@@ -54,10 +62,9 @@ export default function App() {
           <nav className="tabs" role="tablist" aria-label="메뉴">
             {me && TABS.map(([k, l]) => (
               <button key={k} className="tab" role="tab" aria-selected={tab === k || (k === 'cats' && tab.startsWith('cats/'))} onClick={() => go(k)}>
-                {l}{((k === 'bets' && invites) || (k === 'friends' && added)) ? <span className="dot" aria-label="새 소식" /> : null}
+                {l}{k === 'friends' && added ? <span className="dot" aria-label="새 소식" /> : null}
               </button>
             ))}
-            {S.uid && !S.local && <button className="tab" onClick={act.signOut}>로그아웃</button>}
           </nav>
         </header>
         {S.local && <div className="note">지금은 미리보기 상태라 기록이 저장되지 않아요. .env.local 에 Supabase 키를 넣으면 저장되고 친구와 공유돼요.</div>}

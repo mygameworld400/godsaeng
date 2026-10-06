@@ -29,6 +29,7 @@ export default function Calendar() {
   const [ym, setYm] = useState(S.date.slice(0, 7))
   const [mode, setModeState] = useState(readMode)
   const [editing, setEditing] = useState(null)
+  const [adding, setAdding] = useState(false)  // 일정 추가 칸 펼침 (+ / −)
   useEffect(() => { act.loadMonth(ym) }, [ym, act])
   // 다른 곳에서 날짜를 옮기면(‹ › 버튼) 달력도 따라간다
   useEffect(() => { setYm(S.date.slice(0, 7)); setEditing(null) }, [S.date])
@@ -87,7 +88,10 @@ export default function Calendar() {
         const selEvs = evs.filter(e => inRange(e, S.date))
         return (
           <div className="evpanel">
-            <h3 className="evh">{Number(S.date.slice(5, 7))}월 {Number(S.date.slice(8))}일 ({WD[toD(S.date).getDay()]}) 일정</h3>
+            <div className="row" style={{ gap: 6 }}>
+              <h3 className="evh">{Number(S.date.slice(5, 7))}월 {Number(S.date.slice(8))}일 ({WD[toD(S.date).getDay()]}) 일정</h3>
+              <button className="pm" aria-expanded={adding} aria-label={adding ? '일정 추가 닫기' : '일정 추가'} onClick={() => setAdding(!adding)}>{adding ? '−' : '+'}</button>
+            </div>
             {selEvs.map(e => editing === e.id ? (
               <EventForm key={e.id} init={e} date={S.date} onCancel={() => setEditing(null)} onSave={p => { act.updateEvent(e.id, p); setEditing(null) }} />
             ) : (
@@ -100,7 +104,7 @@ export default function Calendar() {
                 <ConfirmX onConfirm={() => act.delEvent(e.id)} />
               </div>
             ))}
-            {!editing && <EventForm date={S.date} onSave={act.addEvent} />}
+            {!editing && adding && <EventForm date={S.date} onSave={act.addEvent} />}
           </div>
         )
       })()}

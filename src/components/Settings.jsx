@@ -6,7 +6,7 @@ import * as plans from '../services/planService'
 import * as questApi from '../services/questService'
 import PlanViewer from './PlanViewer'
 import { COLORS, ConfirmX, Help, Modal, avaOf, formVals } from './common'
-import { makeIcon } from '../lib/cutout'
+import { makeIcon, makeBackground } from '../lib/cutout'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
 
@@ -102,7 +102,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
     try {
       await categories.adminSaveBaseCat(code, {
         id: c?.id, name: v.name, icon: v.icon, color: v.color, sort: +v.sort || 0,
-        image: preview || (clear ? '' : undefined),
+        image: preview || (clear ? '' : undefined), kind: v.kind || 'default',
         options: opts.filter(o => o.name.trim()).map(o => ({ ...o, name: o.name.trim() })),
       })
       toast(c ? '저장했어요.' : '기본 활동을 추가했어요.')
@@ -131,6 +131,10 @@ function BaseCatForm({ c, code, onDone, toast }) {
             {COLORS.map((k, i) => <option key={k} value={k}>색 {i + 1}</option>)}
           </select>
           <input className="inp" name="sort" type="number" defaultValue={c?.sort ?? 0} aria-label="순서" title="작을수록 앞" style={{ flex: '0 0 70px' }} />
+          <select className="inp" name="kind" defaultValue={c?.kind || 'default'} aria-label="활동 페이지" title="활동을 눌렀을 때 나오는 페이지">
+            <option value="default">페이지: 기본</option>
+            <option value="ledger">페이지: 가계부</option>
+          </select>
         </div>
         {file && (
           <div className="row">
@@ -280,6 +284,45 @@ function Backup({ code, toast }) {
   )
 }
 
+/* 화면 설정 (계정마다 저장): 배경 색·무늬·이미지, 제목 형광펜 색·모양 */
+const BG_COLORS = ['#EEF1F6', '#FFF8EC', '#FDEFF4', '#EEF7EF', '#EAF4FB', '#F2EEFB', '#F4F1EA', '#FFFFFF']
+const MARK_COLORS = ['#FFD84D', '#FFB3C7', '#A8E6CF', '#A7D8FF', '#D7C4FF', '#FFC59E', '#E0E0E0']
+const PATS = [['grid', '모눈'], ['dots', '도트'], ['lines', '줄'], ['check', '체크'], ['plain', '민무늬']]
+const MARKS = [['pen', '형광펜'], ['line', '밑줄'], ['box', '배경'], ['none', '없음']]
+
+function Display() {
+  const { S, act } = useStore()
+  const ui = S.ui || {}
+  const set = patch => act.setUi(patch)
+  const upload = async f => { try { set({ image: await makeBackground(f) }) } catch (e) { act.toast(e.message) } }
+  return (
+    <section className="sheet">
+      <h2><span>화면 설정</span><Help>배경과 제목 형광펜을 바꿔요. 내 계정에만 적용되고, 다른 기기에서 로그인해도 그대로예요.</Help></h2>
+      {S.uid && !S.local && S.ui === undefined && <p className="sub">화면 설정 저장 준비 중이에요. 바꾼 내용은 지금 화면에만 보여요.</p>}
+      <div className="set-row"><span className="sub">배경 색</span>
+        {BG_COLORS.map(c => <button key={c} className={'swatch big' + ((ui.bg || '') === c ? ' on' : '')} style={{ background: c }} aria-label={c} onClick={() => set({ bg: c })} />)}
+        <input type="color" value={ui.bg || '#EEF1F6'} onChange={e => set({ bg: e.target.value })} aria-label="다른 배경 색" />
+      </div>
+      <div className="set-row"><span className="sub">배경 무늬</span>
+        {PATS.map(([k, l]) => <button key={k} className={'btn sm' + ((ui.pattern || 'grid') === k ? ' hl' : '')} onClick={() => set({ pattern: k })}>{l}</button>)}
+      </div>
+      <div className="set-row"><span className="sub">배경 이미지</span>
+        <label className="btn sm">{ui.image ? '이미지 바꾸기' : '이미지 올리기'}<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload(f) }} /></label>
+        {ui.image && <><img className="bg-thumb" src={ui.image} alt="" /><button className="x" onClick={() => set({ image: '' })}>이미지 빼기</button></>}
+        <Help>이미지를 올리면 배경 색·무늬 대신 이미지가 화면 뒤에 깔려요.</Help>
+      </div>
+      <div className="set-row"><span className="sub">제목 표시</span>
+        {MARKS.map(([k, l]) => <button key={k} className={'btn sm' + ((ui.markStyle || 'pen') === k ? ' hl' : '')} onClick={() => set({ markStyle: k })}>{l}</button>)}
+      </div>
+      <div className="set-row"><span className="sub">표시 색</span>
+        {MARK_COLORS.map(c => <button key={c} className={'swatch big' + ((ui.mark || '') === c ? ' on' : '')} style={{ background: c }} aria-label={c} onClick={() => set({ mark: c })} />)}
+        <input type="color" value={ui.mark || '#FFD84D'} onChange={e => set({ mark: e.target.value })} aria-label="다른 표시 색" />
+      </div>
+      <div className="row"><ConfirmX onConfirm={() => set({ bg: '', pattern: '', image: '', mark: '', markStyle: '' })} label="기본으로 되돌리기" className="btn sm" /></div>
+    </section>
+  )
+}
+
 export default function Settings() {
   const { S, act } = useStore()
   const [code, setCode] = useState('')
@@ -296,10 +339,17 @@ export default function Settings() {
 
   return (
     <div className="stack">
-      <section className="sheet">
-        <h2><span>화면 설정</span></h2>
-        <p className="empty">폰트 설정 같은 화면 옵션이 여기에 들어올 예정이에요.</p>
-      </section>
+      <Display />
+
+      {S.uid && !S.local && (
+        <section className="sheet">
+          <h2><span>계정</span></h2>
+          <div className="row">
+            <span>{S.me?.nick}{S.me?.handle ? ` (${S.me.handle})` : ''}</span>
+            <button className="btn sm" onClick={act.signOut}>로그아웃</button>
+          </div>
+        </section>
+      )}
 
       <section className="sheet">
         <div className="row between">
@@ -322,7 +372,7 @@ export default function Settings() {
             </div>
             <h2><span>기본 활동</span><Help>모두에게 보이는 기본 활동이에요. 각자 활동 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</Help></h2>
             <div className="stack" style={{ gap: 10 }}>
-              {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
+              {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.kind + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
             <Backup code={code} toast={act.toast} />

@@ -98,3 +98,13 @@ export async function makeAvatar(file) {
   ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, SIZE, SIZE)
   return c.toDataURL('image/jpeg', 0.85)
 }
+
+/** 배경 이미지: 긴 쪽 1600px 이하 JPEG data URL */
+export async function makeBackground(file) {
+  const img = await loadImage(file)
+  const k = Math.min(1, 1600 / Math.max(img.width, img.height))
+  const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k)
+  const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(img, 0, 0, c.width, c.height)
+  return c.toDataURL('image/jpeg', 0.8)
+}

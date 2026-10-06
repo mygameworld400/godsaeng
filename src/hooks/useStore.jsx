@@ -6,7 +6,7 @@ import * as auth from '../services/authService'
 import * as profiles from '../services/profileService'
 import * as days from '../services/dayService'
 import * as cheers from '../services/cheerService'
-import * as bets from '../services/betService'
+import * as ledger from '../services/ledgerService'
 import * as categories from '../services/categoryService'
 import * as events from '../services/eventService'
 import * as quests from '../services/questService'
@@ -32,7 +32,7 @@ export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], notes: null, bubbleOpen: readBubble(),
+  me: null, people: {}, days: {}, diary: {}, fday: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], notes: null, bubbleOpen: readBubble(),
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -62,15 +62,16 @@ export function StoreProvider({ children }) {
 
   async function loadAll() {
     const uid = S.uid, since = addDays(today(), -45)
-    const [p, priv, d, di, ch, base, qs] = await Promise.all([
-      profiles.listProfiles(), profiles.myPrivate(uid), days.listMyDays(uid, since), days.listDiaries(uid, since), bets.listBets(),
+    const [p, priv, d, di, base, qs] = await Promise.all([
+      profiles.listProfiles(), profiles.myPrivate(uid), days.listMyDays(uid, since), days.listDiaries(uid, since),
       categories.listBaseCats(), quests.listQuests().catch(() => []),  // 챌린지 테이블(014) 전이면 빈 목록
     ])
     S.people = p
     S.me = p[uid] ? { ...structuredClone(p[uid]), routines: priv?.routines ?? p[uid].routines } : null
     S.catDetails = priv?.catDetails || {}
     S.diaryCover = priv?.diaryCover  // undefined 면 표지 칸(013) 없음 → 저장 안 함
-    S.days = d; S.diary = di; S.ch = ch; S.baseCats = base; S.months = {}; S.events = {}; S.quests = qs
+    S.ui = priv?.ui                  // 화면 설정 (018 전이면 undefined)
+    S.days = d; S.diary = di; S.baseCats = base; S.months = {}; S.events = {}; S.quests = qs
     syncBaseCats()
     await loadFriendDays()
     if (S.me && !S.view) await setView(uid)
@@ -92,9 +93,9 @@ export function StoreProvider({ children }) {
   /** 다른 사람·관리자가 바꾼 것만 가볍게 다시 받는다 (내 기록은 수정 중일 수 있어 건드리지 않음). */
   async function softRefresh() {
     if (S.local || !S.uid || !S.loaded) return
-    const [p, base, ch, qs] = await Promise.all([profiles.listProfiles(), categories.listBaseCats(), bets.listBets(), quests.listQuests().catch(() => null)])
+    const [p, base, qs] = await Promise.all([profiles.listProfiles(), categories.listBaseCats(), quests.listQuests().catch(() => null)])
     if (S.me && p[S.uid]) p[S.uid] = structuredClone(S.me)
-    S.people = p; S.baseCats = base; S.ch = ch
+    S.people = p; S.baseCats = base
     if (qs) {
       // 내 진도는 저장 대기 중일 수 있으니 화면 값 유지
       for (const q of qs) { const old = S.quests.find(x => x.id === q.id)?.members.find(m => m.userId === S.uid); const mine = q.members.find(m => m.userId === S.uid); if (old && mine) mine.progress = old.progress }
@@ -119,7 +120,7 @@ export function StoreProvider({ children }) {
       const ok = session?.user?.email?.endsWith('@godsaeng.local')
       const uid = ok ? session.user.id : null
       if (uid === S.uid) { bump(); return }
-      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {}, allDiaries: false, diaryCover: undefined, notes: null })
+      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, fday: {}, ledger: {}, catDetails: {}, months: {}, events: {}, allDiaries: false, diaryCover: undefined, notes: null })
       bump()
       if (uid) loadAll().catch(e => { S.loaded = true; onErr(e) })
     }
@@ -136,7 +137,7 @@ export function StoreProvider({ children }) {
   /* ---------- 저장 헬퍼 ---------- */
   const saveMe = () => {
     S.people[S.uid] = structuredClone(S.me)
-    later('me', () => profiles.saveProfile(S.uid, S.me, S.catDetails, S.diaryCover))
+    later('me', () => profiles.saveProfile(S.uid, S.me, S.catDetails, S.diaryCover, S.ui))
   }
   const myDay = date => S.days[date] || (S.days[date] = normDay({}, date))
   const saveDay = date => {
@@ -297,6 +298,27 @@ export function StoreProvider({ children }) {
       later('note:' + id, () => notes.saveNote(id, body))
     },
     delNote(id) { S.notes = S.notes.filter(x => x.id !== id); bump(); now(() => notes.removeNote(id)) },
+    /* ---------- 화면 설정 (각자) ---------- */
+    setUi(patch) { S.ui = { ...S.ui, ...patch }; if (!S.local) saveMe(); bump() },
+
+    /* ---------- 가계부 ---------- */
+    async loadLedger(catId) {
+      if (S.ledger[catId]) return
+      if (S.local) { S.ledger[catId] = []; bump(); return }
+      try { S.ledger[catId] = await ledger.listLedger(S.uid, catId) } catch { S.ledger[catId] = []; S.ledgerError = true }
+      bump()
+    },
+    addLedger(catId, e) {
+      const x = { id: crypto.randomUUID(), ...e }
+      S.ledger[catId] = [x, ...(S.ledger[catId] || [])]; bump()
+      now(() => ledger.addLedger(S.uid, catId, x))
+    },
+    updateLedger(catId, id, patch) {
+      const x = S.ledger[catId]?.find(y => y.id === id); if (!x) return
+      Object.assign(x, patch); bump(); now(() => ledger.updateLedger(id, x))
+    },
+    delLedger(catId, id) { S.ledger[catId] = S.ledger[catId].filter(y => y.id !== id); bump(); now(() => ledger.removeLedger(id)) },
+
     setDiaryCover(patch) { S.diaryCover = { ...S.diaryCover, ...patch }; saveMe(); bump() },
     setDiary(text) {
       const date = S.date
@@ -322,20 +344,6 @@ export function StoreProvider({ children }) {
     },
     delCheer(id) { S.cheers = S.cheers.filter(c => c.id !== id); bump(); now(() => cheers.removeCheer(id)) },
 
-    createBet(title, n, penalty, invite) {
-      const members = { [S.uid]: 'in' }
-      invite.forEach(f => { members[f] = 'invited' })
-      const c = { id: crypto.randomUUID(), title, penalty, by: S.uid, start: today(), end: addDays(today(), n - 1), members, checks: {} }
-      S.ch[c.id] = c; bump()
-      now(() => bets.createBet(c))
-    },
-    joinBet(id, status) { S.ch[id].members[S.uid] = status; bump(); now(() => bets.setMember(id, status)) },
-    checkBet(id) {
-      const t = today(), c = S.ch[id], mine = c.checks[S.uid] || (c.checks[S.uid] = {})
-      mine[t] = !mine[t]; bump()
-      now(() => bets.checkBet(id, t, mine[t]))
-    },
-    delBet(id) { delete S.ch[id]; bump(); now(() => bets.removeBet(id)) },
   }
 
   // act 는 S 를 직접 참조하므로 한 번만 만든다.

@@ -18,16 +18,17 @@ export async function listProfiles() {
 export async function myPrivate(uid) {
   const rows = unwrap(await supabase.from('gs_private').select('*').eq('user_id', uid))
   const r = rows[0]
-  return r ? { routines: r.routines, catDetails: r.cat_details || {}, ...(r.diary_cover !== undefined ? { diaryCover: r.diary_cover || {} } : {}) } : null
+  return r ? { routines: r.routines, catDetails: r.cat_details || {}, ...(r.diary_cover !== undefined ? { diaryCover: r.diary_cover || {} } : {}),
+    ...(r.ui !== undefined ? { ui: r.ui || {} } : {}) } : null
 }
 
 /** 공개 프로필에는 공개 루틴과 개수만, 전체 목록과 활동 세부는 gs_private 에. */
-export async function saveProfile(uid, p, catDetails = {}, diaryCover) {
+export async function saveProfile(uid, p, catDetails = {}, diaryCover, ui) {
   const now = new Date().toISOString()
   unwrap(await supabase.from('gs_profiles').upsert({
     id: uid, nick: p.nick, emoji: p.emoji, bio: p.bio || '', cats: p.cats, friends: p.friends,
     ...('avatar' in p ? { avatar: p.avatar || null } : {}),
     routines: p.routines.filter(r => r.pub), r_count: p.routines.length, updated_at: now,
   }))
-  unwrap(await supabase.from('gs_private').upsert({ user_id: uid, routines: p.routines, cat_details: catDetails, ...(diaryCover ? { diary_cover: diaryCover } : {}), updated_at: now }))
+  unwrap(await supabase.from('gs_private').upsert({ user_id: uid, routines: p.routines, cat_details: catDetails, ...(diaryCover ? { diary_cover: diaryCover } : {}), ...(ui ? { ui } : {}), updated_at: now }))
 }

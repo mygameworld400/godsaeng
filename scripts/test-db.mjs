@@ -207,6 +207,16 @@ try {
   ok(!!(await A.sb.from('gs_notes').insert({ user_id: A.id, kind: 'etc', body: '' })).error, '메모·낙서 말고 다른 종류는 거절')
   ok((await B.sb.from('gs_notes').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 메모·낙서를 못 봄')
 
+  console.log('가계부·화면 설정')
+  ok(!(await A.sb.from('gs_ledger').insert({ user_id: A.id, cat_id: 'c1', type: 'out', amount: 12000, category: 'k0', memo: '점심', date: today })).error, 'A 지출 기록')
+  ok(!!(await A.sb.from('gs_ledger').insert({ user_id: A.id, cat_id: 'c1', type: 'out', amount: -5, date: today })).error, '0 이하 금액은 거절')
+  ok((await B.sb.from('gs_ledger').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 가계부를 못 봄')
+  ok(!(await A.sb.from('gs_private').update({ ui: { bg: '#FDEFF4', pattern: 'dots', markStyle: 'box' } }).eq('user_id', A.id)).error, 'A 화면 설정 저장')
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: '', p_name: 'L' + tag, p_icon: '💰', p_color: 'c3', p_sort: 97, p_kind: 'ledger' })).error, '관리자가 가계부 페이지 추천 활동 생성')
+  const lc = (await adm('gs_admin_base_cats', {})).data?.find(c => c.name === 'L' + tag)
+  ok(lc?.page_kind === 'ledger', '추천 활동에 페이지 종류 저장')
+  if (lc) await adm('gs_admin_base_cat_delete', { p_id: lc.id })
+
   console.log('백업')
   ok((await client().rpc('gs_admin_backup', { p_code: 'wrong' })).error?.message.includes('bad_admin'), '관리자 코드 없이 백업 불가')
   const bk = await adm('gs_admin_backup', {})

@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
 import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, Modal, catIcon, formVals, withImage } from './common'
 import QuestPage, { PlanScreen, questCat } from './QuestPage'
+import Ledger from './Ledger'
 
 /* 활동 탭. 내 활동(담은 기본 + 직접 만든 개별)을 내가 정한 순서로 한 목록에 보여 준다.
    기본 활동(관리자가 정한 것)은 '추천 활동' 버튼을 눌러야 보이고, 눌러서 담는다.
@@ -145,6 +146,8 @@ function CatPage({ id }) {
   )
   const linked = S.quests.filter(q => q.baseId === cat.base && (q.optionId || null) === (cat.opt || null))
   const d = act.catDetail(id), done = d.todos.filter(t => t.done).length
+  // 추천 활동이 '가계부' 페이지면 기본 구성(시작 날짜·목표·투두) 대신 가계부
+  const isLedger = S.baseCats.find(b => b.id === cat.base)?.kind === 'ledger'
   const isBase = !!cat.base  // 기본 활동은 이름·아이콘을 관리자가 정한다 (빼기만 가능)
   const routines = S.me.routines.filter(r => r.cat === id)
 
@@ -206,6 +209,7 @@ function CatPage({ id }) {
         )}
       </section>
 
+      {isLedger ? <Ledger cat={cat} /> : <>
       <div className="cols">
         <section className="sheet">
           <h2><span>시작 날짜</span></h2>
@@ -242,6 +246,7 @@ function CatPage({ id }) {
           {routines.map(r => <div key={r.id} className="item ro"><span className="mark">↻</span><span className="t">{r.text}</span></div>)}
         </section>
       )}
+      </>}
     </div>
   )
 }
