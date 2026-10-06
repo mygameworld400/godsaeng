@@ -71,7 +71,9 @@ export function StoreProvider({ children }) {
     if (S.local) { S.uid = 'me'; S.ready = true; S.loaded = true; bump(); return }
     const apply = async session => {
       S.session = session; S.ready = true
-      const uid = session?.user?.id || null
+      // 갓생홈피 계정(gs-…@godsaeng.local)만 로그인으로 인정한다
+      const ok = session?.user?.email?.endsWith('@godsaeng.local')
+      const uid = ok ? session.user.id : null
       if (uid === S.uid) { bump(); return }
       Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {} })
       bump()

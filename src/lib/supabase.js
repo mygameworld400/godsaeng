@@ -6,7 +6,9 @@ import { createClient } from '@supabase/supabase-js'
 const URL = import.meta.env.VITE_SUPABASE_URL
 const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-export const supabase = URL && KEY ? createClient(URL, KEY) : null
+/* 미니홈·메롱과 같은 출처(mygameworld400.github.io) + 같은 Supabase 프로젝트라
+   기본 저장 키를 쓰면 로그인 세션이 앱끼리 공유된다. 갓생홈피 전용 키로 분리한다. */
+export const supabase = URL && KEY ? createClient(URL, KEY, { auth: { storageKey: 'godsaeng-auth' } }) : null
 export const hasServer = !!supabase
 
 /** 쿼리 결과를 풀어주고 에러는 그대로 던진다. */

@@ -2,7 +2,7 @@ import { supabase, unwrap } from '../lib/supabase'
 
 /* 관리자 함수는 매번 관리자 코드를 같이 보낸다. 코드 확인은 DB(gs_secrets)에서 한다. */
 
-const toApp = r => ({ id: r.id, login: r.login || '', nick: r.nick, emoji: r.emoji, createdAt: r.created_at, lastSignIn: r.last_sign_in_at })
+const toApp = r => ({ id: r.id, login: r.login || '', nick: r.nick, emoji: r.emoji, createdAt: r.created_at, lastSignIn: r.last_sign_in_at, otherApp: !!r.other_app })
 
 export async function listAccounts(code) {
   return unwrap(await supabase.rpc('gs_admin_list', { p_code: code })).map(toApp)

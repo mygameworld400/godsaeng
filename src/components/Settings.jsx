@@ -32,7 +32,9 @@ function AccountRow({ a, code, onDone, toast }) {
     <div className="acct">
       <div className="person">
         <div className="ava s">{a.emoji}</div>
-        <div className="nm">{a.nick}<small>아이디 <b>{a.login}</b> · 가입 {fmt(a.createdAt)} · 최근 접속 {fmt(a.lastSignIn)}</small></div>
+        <div className="nm">{a.nick}{a.otherApp && <span className="pill" style={{ marginLeft: 6 }}>다른 앱 계정</span>}
+          <small>아이디 <b>{a.login || '없음'}</b> · 가입 {fmt(a.createdAt)} · 최근 접속 {fmt(a.lastSignIn)}</small>
+          {a.otherApp && <small>미니홈 등 다른 앱 로그인으로 만들어진 프로필이에요. 삭제하면 갓생홈피 기록만 지워지고 원래 계정은 남아요.</small>}</div>
         <button className="btn sm" onClick={() => setEdit(!edit)}>{edit ? '닫기' : '수정'}</button>
         <ConfirmX onConfirm={del} label="삭제" className="btn sm warn" />
       </div>

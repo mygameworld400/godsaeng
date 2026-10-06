@@ -126,6 +126,8 @@ try {
   ok((await adm('gs_admin_update', { p_id: B.id, p_login: A.h, p_nick: '', p_password: '' })).error?.message.includes('taken'), '이미 있는 아이디로는 변경 불가')
   ok((await B.sb.from('gs_profiles').select('nick').eq('id', B.id).single()).data?.nick === '바뀐닉', '닉네임 변경 반영')
   B.h = newId
+  ok((await adm('gs_admin_delete', { p_id: '00000000-0000-0000-0000-000000000000' })).error?.message.includes('not_found'), '없는 계정 삭제는 오류로 알려 줌')
+  ok(list.data?.find(a => a.id === A.id)?.other_app === false, '갓생홈피 계정은 다른 앱 계정으로 표시 안 됨')
   if (extraId) {
     ok(!(await adm('gs_admin_delete', { p_id: extraId })).error, '관리자가 계정 삭제')
     ok(!(await adm('gs_admin_list', {})).data?.some(a => a.id === extraId), '삭제한 계정은 목록에서 사라짐')
