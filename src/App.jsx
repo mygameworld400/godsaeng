@@ -35,11 +35,12 @@ export default function App() {
     if (ui.image) { st.setProperty('--bgimg', `url("${ui.image}")`); r.dataset.bgimg = '1' } else { st.removeProperty('--bgimg'); delete r.dataset.bgimg }
   }, [ui.bg, ui.mark, ui.pattern, ui.markStyle, ui.image])
   // 커서: 관리자가 올린 커서 중 내가 고른 것
-  const cursorImg = (S.site?.cursors || []).find(c => c.id === ui.cursor)?.image
+  const cur = (S.site?.cursors || []).find(c => c.id === ui.cursor)
+  const cursorCss = cur ? `url("${cur.image}") ${cur.hx ?? 4} ${cur.hy ?? 4}, auto` : ''
   useEffect(() => {
     const r = document.documentElement
-    if (cursorImg) { r.style.setProperty('--cursor', `url("${cursorImg}") 4 4, auto`); r.dataset.cursor = '1' } else { r.style.removeProperty('--cursor'); delete r.dataset.cursor }
-  }, [cursorImg])
+    if (cursorCss) { r.style.setProperty('--cursor', cursorCss); r.dataset.cursor = '1' } else { r.style.removeProperty('--cursor'); delete r.dataset.cursor }
+  }, [cursorCss])
 
   const go = k => {
     setTab(k)

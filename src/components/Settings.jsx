@@ -9,6 +9,7 @@ import * as siteApi from '../services/siteService'
 import PlanViewer from './PlanViewer'
 import { COLORS, ConfirmX, Help, Modal, avaOf, formVals } from './common'
 import { makeIcon, makeBackground, makeCover, makeCursor, splitStickers } from '../lib/cutout'
+import { readCur } from '../lib/curfile'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
 
@@ -393,10 +394,15 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
       }) : <span className="sub">계정이 없어요.</span>}
     </div>
 
-    <h2><span>커서</span><Help>올린 커서는 모두가 화면 설정에서 골라 쓸 수 있어요. 배경을 자동으로 지우고 40px 로 줄여요.</Help></h2>
+    <h2><span>커서</span><Help>.cur 파일은 그대로(클릭 지점 포함) 쓰고, 일반 이미지는 배경을 지우고 40px 로 줄여요. 올린 커서는 모두가 화면 설정에서 골라 쓸 수 있어요. 움직이는 커서(.ani)는 브라우저가 지원하지 않아요.</Help></h2>
     <div className="set-row">
       <label className="toggle"><input type="checkbox" checked={cut} onChange={e => setCut(e.target.checked)} /> 배경 자동 제거</label>
-      <label className="btn sm pri">커서 이미지 올리기<input type="file" accept="image/*" hidden onChange={file(async f => save('cursors', [...cursors, { id: sid(), name: f.name.replace(/\.[^.]+$/, '').slice(0, 12), image: await makeCursor(f, { cutout: cut }) }], '커서를 추가했어요.'))} /></label>
+      <label className="btn sm pri">커서 올리기 (.cur · 이미지)<input type="file" accept=".cur,.ico,image/*" hidden onChange={file(async f => {
+        const name = f.name.replace(/\.[^.]+$/, '').slice(0, 12)
+        // .cur·.ico 는 그림과 클릭 지점을 그대로 살리고, 일반 이미지는 (선택) 배경 제거 후 40px
+        const cur = /\.(cur|ico)$/i.test(f.name) ? await readCur(f) : { image: await makeCursor(f, { cutout: cut }), hx: 2, hy: 2 }
+        await save('cursors', [...cursors, { id: sid(), name, image: cur.image, hx: cur.hx, hy: cur.hy }], '커서를 추가했어요.')
+      })} /></label>
     </div>
     <div className="row">{cursors.map(c => (
       <span key={c.id} className="chip"><img src={c.image} alt="" style={{ width: 24, height: 24 }} />{c.name}
