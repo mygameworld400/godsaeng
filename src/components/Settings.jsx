@@ -134,6 +134,8 @@ function BaseCatForm({ c, code, onDone, toast }) {
           <select className="inp" name="kind" defaultValue={c?.kind || 'default'} aria-label="활동 페이지" title="활동을 눌렀을 때 나오는 페이지">
             <option value="default">페이지: 기본</option>
             <option value="ledger">페이지: 가계부</option>
+            <option value="reading">페이지: 독서</option>
+            <option value="workout">페이지: 운동</option>
           </select>
         </div>
         {file && (

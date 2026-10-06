@@ -7,6 +7,8 @@ import * as profiles from '../services/profileService'
 import * as days from '../services/dayService'
 import * as cheers from '../services/cheerService'
 import * as ledger from '../services/ledgerService'
+import * as books from '../services/bookService'
+import * as workouts from '../services/workoutService'
 import * as categories from '../services/categoryService'
 import * as events from '../services/eventService'
 import * as quests from '../services/questService'
@@ -32,7 +34,7 @@ export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], notes: null, bubbleOpen: readBubble(),
+  me: null, people: {}, days: {}, diary: {}, fday: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], notes: null, books: {}, workouts: {}, bubbleOpen: readBubble(),
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -120,7 +122,7 @@ export function StoreProvider({ children }) {
       const ok = session?.user?.email?.endsWith('@godsaeng.local')
       const uid = ok ? session.user.id : null
       if (uid === S.uid) { bump(); return }
-      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, fday: {}, ledger: {}, catDetails: {}, months: {}, events: {}, allDiaries: false, diaryCover: undefined, notes: null })
+      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, fday: {}, ledger: {}, books: {}, workouts: {}, catDetails: {}, months: {}, events: {}, allDiaries: false, diaryCover: undefined, notes: null })
       bump()
       if (uid) loadAll().catch(e => { S.loaded = true; onErr(e) })
     }
@@ -217,9 +219,10 @@ export function StoreProvider({ children }) {
       if (S.local || S.months[ym]) return
       S.months[ym] = true
       const [y, m] = ym.split('-').map(Number), from = ym + '-01', to = ym + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0')
-      Promise.all([days.listMyDays(S.uid, from, to), events.listEvents(S.uid, from, to)]).then(([got, evs]) => {
+      Promise.all([days.listMyDays(S.uid, from, to), events.listEvents(S.uid, from, to), workouts.listWorkouts(S.uid, from, to).catch(() => [])]).then(([got, evs, ws]) => {
         for (const k in got) if (!S.days[k]) S.days[k] = got[k]
         evs.forEach(e => { S.events[e.id] = e })
+        ws.forEach(w => { S.workouts[w.id] = w })
         bump()
       }).catch(e => { delete S.months[ym]; onErr(e) })
     },
@@ -318,6 +321,22 @@ export function StoreProvider({ children }) {
       Object.assign(x, patch); bump(); now(() => ledger.updateLedger(id, x))
     },
     delLedger(catId, id) { S.ledger[catId] = S.ledger[catId].filter(y => y.id !== id); bump(); now(() => ledger.removeLedger(id)) },
+
+    /* ---------- 북 컬렉션 ---------- */
+    async loadBooks(catId) {
+      if (S.books[catId]) return
+      if (S.local) { S.books[catId] = []; bump(); return }
+      try { S.books[catId] = await books.listBooks(S.uid, catId) } catch { S.books[catId] = []; S.booksError = true }
+      bump()
+    },
+    addBook(catId, b) { const x = { id: crypto.randomUUID(), ...b }; S.books[catId] = [x, ...(S.books[catId] || [])]; bump(); now(() => books.addBook(S.uid, catId, x)) },
+    updateBook(catId, id, patch) { const x = S.books[catId]?.find(y => y.id === id); if (!x) return; Object.assign(x, patch); bump(); now(() => books.updateBook(id, x)) },
+    delBook(catId, id) { S.books[catId] = S.books[catId].filter(y => y.id !== id); bump(); now(() => books.removeBook(id)) },
+
+    /* ---------- 운동 일지 (달력 칸 아이콘은 loadMonth 가 함께 불러옴) ---------- */
+    addWorkout(w) { const x = { id: crypto.randomUUID(), ...w }; S.workouts[x.id] = x; bump(); now(() => workouts.addWorkout(S.uid, x)) },
+    updateWorkout(id, patch) { const x = S.workouts[id]; if (!x) return; Object.assign(x, patch); bump(); now(() => workouts.updateWorkout(id, x)) },
+    delWorkout(id) { delete S.workouts[id]; bump(); now(() => workouts.removeWorkout(id)) },
 
     setDiaryCover(patch) { S.diaryCover = { ...S.diaryCover, ...patch }; saveMe(); bump() },
     setDiary(text) {
