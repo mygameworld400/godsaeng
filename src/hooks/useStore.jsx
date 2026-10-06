@@ -79,9 +79,10 @@ export function StoreProvider({ children }) {
     let changed = false
     for (const c of S.me.cats) {
       const b = c.base && S.baseCats.find(x => x.id === c.base)
-      if (b && (c.name !== b.name || c.icon !== b.icon || c.color !== b.color)) {
-        Object.assign(c, { name: b.name, icon: b.icon, color: b.color }); changed = true
-      }
+      if (!b) continue
+      const o = c.opt && b.options.find(x => x.id === c.opt)  // 하위 선택지(예: 언어 → 영어)면 그 이름·아이콘
+      const want = { name: o ? o.name : b.name, icon: (o && o.icon) || b.icon, color: b.color }
+      if (c.name !== want.name || c.icon !== want.icon || c.color !== want.color) { Object.assign(c, want); changed = true }
     }
     if (changed) saveMe()
   }
@@ -162,11 +163,12 @@ export function StoreProvider({ children }) {
 
     /* ---------- 활동 ---------- */
     // 기본 활동을 내 활동으로 복사한다. base 로 원본을 기억해 '추가됨' 표시에 쓴다.
-    addBaseCat(b) {
+    // o: 하위 선택지 (예: 언어 → 영어). 선택지마다 따로 담을 수 있다.
+    addBaseCat(b, o) {
       if (S.me.cats.length >= 20) return toast('활동은 20개까지 만들 수 있어요.')
-      if (S.me.cats.some(c => c.base === b.id)) return
+      if (S.me.cats.some(c => c.base === b.id && (c.opt || null) === (o?.id || null))) return
       const id = rid()
-      S.me.cats.push({ id, name: b.name, icon: b.icon, color: b.color, base: b.id })
+      S.me.cats.push({ id, name: o ? o.name : b.name, icon: (o && o.icon) || b.icon, color: b.color, base: b.id, ...(o ? { opt: o.id } : {}) })
       S.catDetails[id] = { start: today(), goal: '', todos: [] }
       saveMe(); bump()
       return id

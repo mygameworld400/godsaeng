@@ -15,6 +15,7 @@ const fmt = s => localDateTime(s) || '-'
 function AccountRow({ a, code, onDone, toast }) {
   const [edit, setEdit] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [opts, setOpts] = useState(c?.options || [])
   const save = async e => {
     const v = formVals(e)
     setBusy(true)
@@ -50,6 +51,29 @@ function AccountRow({ a, code, onDone, toast }) {
   )
 }
 
+/** 하위 선택지 편집 (예: 언어 → 영어, 일본어). 각 선택지는 이름 + 이모지 + (선택) 이미지 */
+function OptionsEditor({ opts, setOpts, toast }) {
+  const upd = (i, patch) => setOpts(opts.map((o, j) => j === i ? { ...o, ...patch } : o))
+  const upload = async (i, f) => { try { upd(i, { image: await makeIcon(f, { cutout: true, tolerance: 28 }) }) } catch (e) { toast(e.message) } }
+  return (
+    <div className="opts">
+      <span className="sub">하위 선택지 <Help>예: 언어 → 영어, 일본어. 선택지가 있으면 추천 활동에서 누를 때 팝업으로 하나를 고르고, 고른 선택지의 이름·아이콘으로 담겨요. 이미지는 배경이 자동으로 지워져요.</Help></span>
+      {opts.map((o, i) => (
+        <div className="addf" key={o.id}>
+          <span className="checker sm">{o.image ? <img src={o.image} alt="" /> : <span>{o.icon || '·'}</span>}</span>
+          <input className="inp" value={o.icon || ''} onChange={e => upd(i, { icon: e.target.value })} maxLength={4} placeholder="🇺🇸" aria-label="선택지 이모지" style={{ flex: '0 0 56px' }} />
+          <input className="inp" value={o.name} onChange={e => upd(i, { name: e.target.value })} maxLength={12} placeholder="예: 영어" aria-label="선택지 이름" />
+          <label className="btn sm">이미지<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; if (f) upload(i, f); e.target.value = '' }} /></label>
+          {o.image && <button type="button" className="x" onClick={() => upd(i, { image: '' })}>이미지 빼기</button>}
+          <button type="button" className="x" aria-label="선택지 삭제" onClick={() => setOpts(opts.filter((_, j) => j !== i))}>✕</button>
+        </div>
+      ))}
+      <button type="button" className="btn sm" style={{ alignSelf: 'flex-start' }}
+        onClick={() => setOpts([...opts, { id: Math.random().toString(36).slice(2, 9), name: '', icon: '', image: '' }])}>+ 선택지 추가</button>
+    </div>
+  )
+}
+
 /** 기본 활동 한 줄: 이미지(누끼 제거)·이모지·이름·색·순서 수정, 삭제 */
 function BaseCatForm({ c, code, onDone, toast }) {
   const [file, setFile] = useState(null)
@@ -76,9 +100,10 @@ function BaseCatForm({ c, code, onDone, toast }) {
       await categories.adminSaveBaseCat(code, {
         id: c?.id, name: v.name, icon: v.icon, color: v.color, sort: +v.sort || 0,
         image: preview || (clear ? '' : undefined),
+        options: opts.filter(o => o.name.trim()).map(o => ({ ...o, name: o.name.trim() })),
       })
       toast(c ? '저장했어요.' : '기본 활동을 추가했어요.')
-      if (!c) { form.reset(); setFile(null); setPreview('') }
+      if (!c) { form.reset(); setFile(null); setPreview(''); setOpts([]) }
       onDone()
     } catch (err) { toast(explain(err)) }
     setBusy(false)
@@ -110,6 +135,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
             {cut && <label className="toggle">강도 <input type="range" min={5} max={80} value={tol} onChange={e => setTol(+e.target.value)} /></label>} <Help>배경이 덜 지워지면 강도를 올리고, 그림이 같이 지워지면 내려 주세요.</Help>
           </div>
         )}
+        <OptionsEditor opts={opts} setOpts={setOpts} toast={toast} />
         <div className="row">
           <button className="btn pri sm" disabled={busy}>{c ? '저장' : '추가'}</button>
           {c && <ConfirmX onConfirm={del} label="삭제" className="btn sm warn" />}
@@ -161,7 +187,7 @@ export default function Settings() {
             </div>
             <h2><span>기본 활동</span><Help>모두에게 보이는 기본 활동이에요. 각자 활동 탭에서 골라 추가해요. 이미지를 올리면 이모지 대신 이미지가 아이콘이 돼요. 순서는 숫자가 작을수록 앞이에요.</Help></h2>
             <div className="stack" style={{ gap: 10 }}>
-              {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
+              {baseCats.map(c => <BaseCatForm key={c.id + c.name + c.icon + c.color + c.sort + c.image.length + JSON.stringify(c.options).length} c={c} code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />)}
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
           </>}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { catOf } from '../lib/stats'
 
 export const AVA = ['🐣', '🐻', '🐰', '🦊', '🐱', '🐶', '🐼', '🐸', '🦄', '🐧', '🌱', '🔥']
@@ -6,6 +7,27 @@ export const MOODS = ['😆', '🙂', '😐', '😮‍💨', '😭']
 export const CAT_ICONS = ['🏃', '📚', '🏠', '💪', '🧘', '🍎', '💧', '💰', '🎨', '🎸', '✍️', '💻', '🌱', '🧹', '😴', '🎯', '📖', '🗣️', '✈️', '🏷️']
 export const COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 export const catIcon = c => c?.icon || '🏷️'
+
+/** 팝업. 오른쪽 위 ✕, 바깥 클릭, Esc 로 닫힌다. */
+export function Modal({ title, onClose, wide, children }) {
+  useEffect(() => {
+    const k = e => { if (e.key === 'Escape') onClose() }
+    addEventListener('keydown', k)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { removeEventListener('keydown', k); document.body.style.overflow = prev }
+  }, [onClose])
+  return createPortal(
+    <div className="modal-bg" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={'modal' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title}>
+        <button className="modal-x" aria-label="닫기" onClick={onClose}>✕</button>
+        {title && <h2 className="modal-t"><span>{title}</span></h2>}
+        {children}
+      </div>
+    </div>,
+    document.body,
+  )
+}
 
 /** 작은 ? 아이콘. 마우스를 올리면(또는 키보드 포커스) 설명이 뜬다. 클릭 동작 없음. */
 export function Help({ children }) {
@@ -20,7 +42,11 @@ export function Help({ children }) {
 export const withImage = (cat, baseCats) => {
   if (!cat || cat.image) return cat
   const b = cat.base ? baseCats.find(x => x.id === cat.base) : null
-  return b?.image ? { ...cat, image: b.image } : cat
+  if (!b) return cat
+  const o = cat.opt && (b.options || []).find(x => x.id === cat.opt)
+  // 선택지에 아이콘·이미지가 따로 있으면 그것, 없으면 상위 활동 이미지
+  const image = o ? (o.image || (o.icon ? '' : b.image)) : b.image
+  return image ? { ...cat, image } : cat
 }
 
 /** 이미지(있으면) 또는 이모지 */

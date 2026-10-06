@@ -154,6 +154,12 @@ try {
   ok(!!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98, p_image: 'javascript:alert(1)' })).error, '이미지가 아닌 값은 거절')
   await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98, p_image: '' })
   ok(!(await B.sb.from('gs_base_cats').select('image').eq('id', made?.id).single()).data?.image, '빈 값으로 저장하면 이미지 삭제')
+  const opts = [{ id: 'en', name: '영어', icon: '🇺🇸', image: '' }, { id: 'ja', name: '일본어', icon: '🇯🇵', image: png }]
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98, p_options: opts })).error, '관리자가 하위 선택지(영어·일본어) 설정')
+  ok((await B.sb.from('gs_base_cats').select('options').eq('id', made?.id).single()).data?.options?.map(o => o.name).join(',') === '영어,일본어', '사용자에게 하위 선택지가 보임')
+  ok(!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98 })).error
+    && (await B.sb.from('gs_base_cats').select('options').eq('id', made?.id).single()).data?.options?.length === 2, '선택지 없이 저장하면 기존 선택지 유지')
+  ok(!!(await adm('gs_admin_base_cat_save', { p_id: made?.id, p_name: catName + '2', p_icon: '', p_color: '', p_sort: 98, p_options: [{ id: 'x', name: '', icon: '' }] })).error, '이름 없는 선택지는 거절')
   ok(!(await adm('gs_admin_base_cat_delete', { p_id: made?.id })).error, '관리자가 기본 카테고리 삭제')
   const details = { c1: { start: today, goal: '비밀목표', todos: [{ id: 'x', text: '비밀할일', done: false }] } }
   ok(!(await A.sb.from('gs_private').update({ cat_details: details }).eq('user_id', A.id)).error, 'A 카테고리 세부(시작일·목표·투두) 저장')

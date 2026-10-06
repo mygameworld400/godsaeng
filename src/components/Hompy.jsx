@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { today, pretty, localDate } from '../lib/date'
-import { stat, streak, pc } from '../lib/stats'
+import { stat, pc } from '../lib/stats'
 import { AvaPicker, ConfirmX, Help, Ring, avaOf, nickOf, formVals } from './common'
 
 const SHOW = 4  // 목록은 4개까지 보이고 나머지는 펼쳐서 본다
 
-export default function Hompy() {
+/** popup: 친구 탭에서 팝업으로 열 때 (홈피 고르기 줄 없음) */
+export default function Hompy({ popup }) {
   const { S, act } = useStore()
   const [edit, setEdit] = useState(false)
   const [emoji, setEmoji] = useState(S.me.emoji)
@@ -23,9 +24,9 @@ export default function Hompy() {
       ))}
     </div>
   )
-  if (!p) return <div className="stack">{switcher}<div className="sheet"><p className="empty">이 친구의 미니홈피를 찾지 못했어요.</p></div></div>
+  if (!p) return <div className="stack">{!popup && switcher}<div className="sheet"><p className="empty">이 친구의 미니홈피를 찾지 못했어요.</p></div></div>
 
-  const days = mine ? S.days : S.vdays, t = today(), d = days[t], st = stat(p, d, mine), sk = streak(days, p, mine)
+  const days = mine ? S.days : S.vdays, t = today(), d = days[t], st = stat(p, d, mine)
   // 친구 것은 원래 공개 항목만 내려온다. 내 것도 미니홈피에서는 공개 항목만 보여 준다.
   const routines = (p.routines || []).filter(r => r.pub).map(r => ({ ...r, _done: !!d?.checks?.[r.id] }))
   const todos = (d?.todos || []).filter(x => x.pub).map(x => ({ ...x, _done: !!x.done }))
@@ -60,17 +61,16 @@ export default function Hompy() {
 
   return (
     <div className="stack">
-      {switcher}
+      {!popup && switcher}
       <section className="sheet">
         <div className="hero">
           <div className="ava">{p.emoji || '🙂'}</div>
           <div className="grow">
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row" style={{ gap: 10 }}>
               <p className="nick">{p.nick}</p>
-              <span className="pill">연속 <b>{sk}일</b></span>
+              <p className={'bio says' + (p.bio ? '' : ' none')}>{p.bio || (mine ? '한 줄 소개를 적어 보세요.' : '...')}</p>
               {d?.mood && <span className="pill">기분 {d.mood}</span>}
             </div>
-            <p className="bio">{p.bio || (mine ? '한 줄 소개를 적어 보세요.' : '한 줄 소개가 아직 없어요.')}</p>
             <div className="row" style={{ marginTop: 4 }}>
               {mine
                 ? <button className="btn sm" onClick={() => { setEdit(!edit); setEmoji(S.me.emoji) }}>{edit ? '닫기' : '프로필 수정'}</button>

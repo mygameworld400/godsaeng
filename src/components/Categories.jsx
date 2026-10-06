@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
-import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, catIcon, formVals, withImage } from './common'
+import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, Modal, catIcon, formVals, withImage } from './common'
 
 /* 활동 탭. 내 활동(담은 기본 + 직접 만든 개별)을 내가 정한 순서로 한 목록에 보여 준다.
    기본 활동(관리자가 정한 것)은 '추천 활동' 버튼을 눌러야 보이고, 눌러서 담는다.
@@ -25,9 +25,13 @@ function CatList() {
   const [manage, setManage] = useState(false)  // 관리 모드: 삭제·순서 바꾸기
   const [icon, setIcon] = useState(CAT_ICONS[0])
   const [dragId, setDragId] = useState(null)
+  const [pick, setPick] = useState(null)       // 하위 선택지 팝업을 띄운 추천 활동
   const mine = S.me.cats
   // 예전 계정은 base 표시가 없으니 이름이 같으면 추가된 것으로 본다
-  const addedOf = b => mine.find(c => c.base === b.id || (!c.base && c.name === b.name))
+  const addedOf = (b, o) => o
+    ? mine.find(c => c.base === b.id && c.opt === o.id)
+    : mine.find(c => (c.base === b.id && !c.opt) || (!c.base && c.name === b.name))
+  const anyAdded = b => b.options.length ? b.options.some(o => addedOf(b, o)) : addedOf(b)
 
   const create = e => {
     const v = formVals(e)
@@ -55,6 +59,9 @@ function CatList() {
           <div className="recs">
             <div className="icons">
               {S.baseCats.length ? S.baseCats.map(b => {
+                if (b.options.length) return (
+                  <CatIcon key={b.id} cat={b} badge={anyAdded(b) ? '✓' : '…'} onClick={() => setPick(b)} />
+                )
                 const added = addedOf(b)
                 return <CatIcon key={b.id} cat={b} badge={added ? '✓' : '+'} dim={!!added}
                   onClick={() => added ? goCat(added.id) : act.addBaseCat(b)} />
@@ -79,6 +86,19 @@ function CatList() {
           {!manage && <CatIcon cat={{ icon: '＋' }} label="새 활동" on={adding} onClick={() => setAdding(!adding)} />}
           {!mine.length && manage && <p className="empty">담긴 활동이 없어요.</p>}
         </div>
+        {pick && (
+          <Modal title={pick.name} onClose={() => setPick(null)}>
+            <p className="sub">하나를 골라 내 활동에 담아요. 여러 개 담아도 돼요.</p>
+            <div className="icons">
+              {pick.options.map(o => {
+                const added = addedOf(pick, o)
+                const cat = { ...o, icon: o.icon || pick.icon, image: o.image || (o.icon ? '' : pick.image), color: pick.color }
+                return <CatIcon key={o.id} cat={cat} badge={added ? '✓' : '+'} dim={!!added}
+                  onClick={() => { if (added) { setPick(null); goCat(added.id) } else act.addBaseCat(pick, o) }} />
+              })}
+            </div>
+          </Modal>
+        )}
         {adding && !manage && (
           <form className="addf col" onSubmit={create}>
             <label>이름<input className="inp" name="name" maxLength={12} placeholder="예: 다이어트" autoFocus /></label>

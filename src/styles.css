@@ -33,19 +33,21 @@ button{cursor:pointer}
   text-align:left;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s}
 .help-tip::before{content:"";position:absolute;left:50%;top:-5px;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:var(--ink)}
 .help:hover .help-tip,.help:focus-visible .help-tip{opacity:1;visibility:visible}
-.bubble{position:fixed;z-index:15;background:var(--paper);border:1.5px solid var(--ink);border-radius:18px;box-shadow:3px 3px 0 var(--ink);
-  padding:14px;display:flex;flex-direction:column;gap:6px;overflow:auto;
-  right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(330px,calc(100vw - 32px));max-height:min(60vh,520px)}
-.bubble::after{content:"";position:absolute;right:28px;bottom:-9px;width:14px;height:14px;background:var(--paper);
-  border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);transform:rotate(45deg)}
-.bubble.mini{width:auto;padding:8px 18px;font-family:var(--f-display);font-size:17px;color:var(--ink);cursor:pointer;overflow:visible}
-.bubble .evform .row{gap:6px}
-/* 넓은 화면: 본문을 왼쪽으로 조금 밀고, 오른쪽 빈칸에 말풍선 */
+.bubble{position:fixed;z-index:15;background:var(--paper);border:1.5px solid var(--ink);border-radius:26px;box-shadow:3px 3px 0 var(--ink);
+  right:22px;bottom:calc(22px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100vw - 44px))}
+.bubble-in{padding:14px 16px;display:flex;flex-direction:column;gap:4px;overflow:auto;max-height:min(50vh,420px);border-radius:26px}
+/* 말풍선 꼬리 (overflow 가 없는 바깥 상자에 붙여서 잘리지 않게) */
+.bubble::before,.bubble::after{content:"";position:absolute;width:0;height:0;border-style:solid}
+.bubble::before{right:34px;bottom:-15px;border-width:15px 12px 0 0;border-color:var(--ink) transparent transparent transparent}
+.bubble::after{right:36px;bottom:-11px;border-width:12px 9px 0 0;border-color:var(--paper) transparent transparent transparent}
+.bubble.mini{width:auto;padding:8px 20px;font-family:var(--f-display);font-size:17px;color:var(--ink);cursor:pointer}
 @media (min-width:1300px){
   .wrap.with-bubble{margin-left:max(16px,calc(50vw - 670px))}
-  .bubble{right:auto;bottom:auto;top:88px;left:calc(max(16px,50vw - 670px) + 1062px);
-    width:min(300px,calc(100vw - max(16px,50vw - 670px) - 1094px));max-height:calc(100vh - 120px)}
-  .bubble::after{right:auto;bottom:auto;left:-9px;top:26px;border:0;border-left:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink)}
+  .bubble{right:auto;bottom:auto;top:88px;left:calc(max(16px,50vw - 670px) + 1066px);
+    width:min(280px,calc(100vw - max(16px,50vw - 670px) - 1100px))}
+  .bubble-in{max-height:calc(100vh - 140px)}
+  .bubble::before{right:auto;bottom:auto;left:-16px;top:22px;border-width:0 16px 12px 0;border-color:transparent var(--ink) transparent transparent}
+  .bubble::after{right:auto;bottom:auto;left:-11px;top:24px;border-width:0 12px 9px 0;border-color:transparent var(--paper) transparent transparent}
   .bubble.mini{width:auto}
 }
 .gear{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:14px;z-index:20;border:0;background:none;padding:4px;font-size:26px;line-height:1;cursor:pointer;transition:transform .2s}
@@ -109,7 +111,8 @@ select.inp{width:auto;max-width:130px}
 .empty{color:var(--muted);font-size:14px;padding:10px 0;margin:0}
 .addf{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .addf .inp{flex:1 1 150px}
-.addf.col{flex-direction:column}
+.addf.col{flex-direction:column;align-items:stretch}
+.addf.col .inp{flex:none}  /* 세로로 쌓일 때 flex-basis 가 높이로 먹지 않게 */
 
 .diary{font-family:var(--f-hand);font-size:21px;line-height:32px;min-height:192px;width:100%;resize:vertical;border:0;border-radius:8px;padding:0 10px;color:var(--ink);
   background:var(--paper) repeating-linear-gradient(transparent 0 31px,var(--line) 31px 32px)}
@@ -121,6 +124,11 @@ select.inp{width:auto;max-width:130px}
 .toggle{display:inline-flex;align-items:center;gap:7px;font-size:14px;cursor:pointer}
 
 .hero{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.bio.says{position:relative;background:var(--paper);border:1.5px solid var(--ink);border-radius:16px;padding:4px 12px;font-size:16px;margin-left:8px;max-width:100%}
+.bio.says::before,.bio.says::after{content:"";position:absolute;top:50%;width:0;height:0;border-style:solid;transform:translateY(-50%)}
+.bio.says::before{left:-10px;border-width:6px 10px 6px 0;border-color:transparent var(--ink) transparent transparent}
+.bio.says::after{left:-7px;border-width:5px 8px 5px 0;border-color:transparent var(--paper) transparent transparent}
+.bio.says.none{color:var(--muted)}
 .rings{display:flex;gap:10px;flex:none}
 .ring.sm .v{font-size:20px}
 .ring.sm .v small{font-size:11px;margin-top:2px}
@@ -137,8 +145,11 @@ select.inp{width:auto;max-width:130px}
 
 .person{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1.5px solid var(--line);min-width:0}
 .person:last-child{border-bottom:0}
-.person .nm{flex:1;min-width:0;overflow-wrap:anywhere}
-.person .nm small{display:block;color:var(--muted);font-size:13px}
+.person .nm{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1 1 140px}
+.person .nm b{font-weight:700;white-space:nowrap}
+.pbio{color:var(--muted);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.friends-page{font-family:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.friends-page h2{font-family:var(--f-display)}
 .meter{flex:0 0 84px;height:10px;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;background:var(--soft)}
 .meter i{display:block;height:100%;background:var(--hl)}
 .pct{flex:0 0 42px;text-align:right;font-family:var(--f-display);font-variant-numeric:tabular-nums}
@@ -182,6 +193,9 @@ select.inp{width:auto;max-width:130px}
 .basecat .btn{cursor:pointer}
 .checker{width:72px;height:72px;border-radius:10px;display:grid;place-items:center;font-size:36px;
   background:repeating-conic-gradient(var(--soft) 0 25%,var(--paper) 0 50%) 0 0/14px 14px;border:1.5px solid var(--line)}
+.opts{display:flex;flex-direction:column;gap:6px;border-top:1.5px dashed var(--line);padding-top:8px}
+.checker.sm{width:30px;height:30px;font-size:16px;border-radius:7px;flex:none}
+.checker.sm img{width:26px;height:26px}
 .checker img{width:64px;height:64px;object-fit:contain}
 @media (max-width:1120px){.top{padding-right:34px}}
 .span-all{grid-column:1/-1}
@@ -189,6 +203,14 @@ select.inp{width:auto;max-width:130px}
 .fcat{display:flex;flex-direction:column;align-items:center;gap:1px;width:48px}
 .fcat small{font-size:11px;color:var(--muted);text-align:center;overflow-wrap:anywhere;line-height:1.2}
 .fcat .cglyph-emoji{font-size:22px}
+.modal-bg{position:fixed;inset:0;z-index:50;background:rgba(15,20,35,.45);display:grid;place-items:center;padding:16px}
+.modal{position:relative;background:var(--bg);border:1.5px solid var(--ink);border-radius:16px;box-shadow:4px 4px 0 var(--ink);
+  width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:20px 18px 18px;display:flex;flex-direction:column;gap:12px}
+.modal.wide{width:min(980px,100%)}
+.modal-x{position:sticky;top:0;align-self:flex-end;margin:-8px -6px -30px 0;z-index:2;border:0;background:var(--paper);color:var(--ink);
+  width:32px;height:32px;border-radius:50%;font-size:16px;box-shadow:0 0 0 1.5px var(--ink);cursor:pointer}
+.modal-t{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+.modal-t span{background:linear-gradient(transparent 58%,var(--hl) 58%);padding-inline:3px}
 .recs{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mitem{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;border-radius:12px;padding:4px 2px;border:1.5px dashed var(--line)}
 .mitem.dragging{opacity:.4}
