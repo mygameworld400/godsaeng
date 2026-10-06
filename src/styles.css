@@ -499,6 +499,13 @@ html[data-cursor] :is(textarea,input:not([type=checkbox]):not([type=radio]):not(
 .fold[open]>summary::before{transform:rotate(90deg)}
 .fold>summary h2{margin:0}
 .fold-body{display:flex;flex-direction:column;gap:12px;padding:6px 0 10px}
+.book{display:flex;flex-direction:column;gap:4px;color:inherit;text-align:left}
+.book-info{display:flex;flex-direction:column;gap:2px;font-size:12.5px;line-height:1.35}
+.book-info small{color:var(--muted)}
+.book-info em{font-style:normal;color:var(--ink)}
+.edit-dot{position:absolute;bottom:-8px;right:-8px;padding:0 5px;font-size:12px;background:var(--paper)}
+.editor-stage{display:grid;place-items:center;padding:10px;border-radius:12px;background:repeating-conic-gradient(var(--soft) 0 25%,var(--paper) 0 50%) 0 0/14px 14px;max-height:60vh;overflow:auto}
+.editor-canvas{image-rendering:pixelated;cursor:crosshair;touch-action:none;max-width:100%}
 .recs{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mitem{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;border-radius:12px;padding:4px 2px;border:1.5px dashed var(--line)}
 .mitem.dragging{opacity:.4}

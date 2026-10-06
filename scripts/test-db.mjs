@@ -228,6 +228,11 @@ try {
   ok((await adm('gs_admin_book_requests', {})).data?.some(b => b.id === bk2.data?.id), '관리자 표지 요청 목록에 보임')
   ok(!(await adm('gs_admin_book_cover', { p_id: bk2.data?.id, p_cover: png })).error, '관리자가 표지 넣기')
   ok((await A.sb.from('gs_books').select('cover').eq('id', bk2.data?.id).single()).data?.cover === png, 'A 컬렉션에 표지가 들어감')
+  ok(!(await A.sb.from('gs_books').update({ one_line: '최고', review: '전체 후기 비밀', public: true }).eq('id', bk2.data?.id)).error, 'A 후기 쓰고 공개')
+  const pubB = (await B.sb.from('gs_books').select('title,one_line,public').eq('user_id', A.id)).data || []
+  ok(pubB.length === 1 && pubB[0].one_line === '최고', 'B 가 A 의 공개 컬렉션·한줄 후기를 봄')
+  ok(!(await A.sb.from('gs_books').insert({ user_id: A.id, cat_id: 'c1', title: '비공개 책' + tag })).error && (await B.sb.from('gs_books').select('id').eq('user_id', A.id)).data?.length === 1, 'B 에게 비공개 책은 안 보임')
+  ok(!(await A.sb.from('gs_day_private').update({ mood: '😆' }).eq('user_id', A.id).eq('date', today)).error, 'A 오늘의 기분은 본인 기록에 저장')
   ok(!(await A.sb.from('gs_workouts').insert({ user_id: A.id, cat_id: 'c1', date: today, what: '러닝', minutes: 30 })).error, 'A 운동 기록')
   ok((await B.sb.from('gs_workouts').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 운동 기록을 못 봄')
   ok(!(await A.sb.from('gs_profiles').update({ diary_cover: { color: '#E5534B', shape: 'heart', title: '갓생' } }).eq('id', A.id)).error, 'A 다이어리 표지 공개 저장')

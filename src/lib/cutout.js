@@ -30,7 +30,49 @@ function borderColor(d, w, h) {
   return best && best.n > (w + h) * 0.3 ? [best.r / best.n, best.g / best.n, best.b / best.n] : null
 }
 
-function removeBg(ctx, w, h, tolerance) {
+/* gap: 테두리 선의 끊긴 틈(px)을 막고 지운다. 몸통이 배경과 비슷한 색인데 선이 끊겨 있으면 틈으로 지우기가 새어 들어가는 걸 막는다.
+   방법: 배경이 아닌 픽셀(선)을 gap 만큼 두껍게 만든 상태에서 바깥부터 지우고, 지운 곳을 다시 gap 만큼만 넓혀 가장자리 배경을 마저 지운다. */
+function removeBgGap(ctx, w, h, tolerance, gap) {
+  const img = ctx.getImageData(0, 0, w, h), d = img.data
+  const bg = borderColor(d, w, h)
+  if (!bg) return
+  const tol = tolerance * tolerance * 3, soft = (tolerance * 1.6) ** 2 * 3, N = w * h
+  const dist = new Float32Array(N), bgLike = new Uint8Array(N)
+  for (let p = 0; p < N; p++) { const i = p * 4, dd = (d[i] - bg[0]) ** 2 + (d[i + 1] - bg[1]) ** 2 + (d[i + 2] - bg[2]) ** 2; dist[p] = dd; bgLike[p] = dd <= soft && d[i + 3] > 0 ? 1 : 0 }
+  // 선(배경 아닌 곳) 두껍게
+  let wall = new Uint8Array(N); for (let p = 0; p < N; p++) wall[p] = bgLike[p] ? 0 : 1
+  for (let k = 0; k < gap; k++) {
+    const nx = wall.slice()
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const p = y * w + x; if (wall[p]) continue
+      if ((x > 0 && wall[p - 1]) || (x < w - 1 && wall[p + 1]) || (y > 0 && wall[p - w]) || (y < h - 1 && wall[p + w])) nx[p] = 1
+    }
+    wall = nx
+  }
+  // 바깥에서부터 지울 곳 찾기
+  const reach = new Int16Array(N).fill(-1), q = []
+  const seed = p => { if (reach[p] < 0 && bgLike[p] && !wall[p]) { reach[p] = 0; q.push(p) } }
+  for (let x = 0; x < w; x++) { seed(x); seed((h - 1) * w + x) }
+  for (let y = 0; y < h; y++) { seed(y * w); seed(y * w + w - 1) }
+  for (let qi = 0; qi < q.length; qi++) {
+    const p = q[qi], x = p % w, r = reach[p], open = r === 0  // 0: 막힌 상태로 닿은 곳, 1..gap: 다시 넓히는 중
+    const nbs = [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p - w, p + w]
+    for (const n of nbs) {
+      if (n < 0 || n >= N || reach[n] >= 0 || !bgLike[n]) continue
+      if (!wall[n] && open) { reach[n] = 0; q.push(n) }
+      else if (r < gap) { reach[n] = r + 1; q.push(n) }  // 선 근처의 배경은 gap 만큼만
+    }
+  }
+  for (let p = 0; p < N; p++) {
+    if (reach[p] < 0) continue
+    const i = p * 4, dd = dist[p]
+    d[i + 3] = dd <= tol ? 0 : Math.min(d[i + 3], Math.round(255 * (dd - tol) / (soft - tol)))
+  }
+  ctx.putImageData(img, 0, 0)
+}
+
+function removeBg(ctx, w, h, tolerance, gap = 0) {
+  if (gap > 0) return removeBgGap(ctx, w, h, tolerance, gap)
   const img = ctx.getImageData(0, 0, w, h), d = img.data
   const bg = borderColor(d, w, h)
   if (!bg) return
@@ -135,13 +177,14 @@ export async function makeCursor(file, { cutout = true, tolerance = 28 } = {}) {
  * 스티커 시트 나누기: 한 장에 여러 스티커가 있는 이미지 → 배경을 지우고 떨어진 그림 덩어리마다 하나씩 (PNG, 긴 쪽 ≤160px).
  * 작은 틈(몇 px)은 이어진 것으로 본다(글자·점이 한 스티커에 붙어 있게). 너무 작은 조각은 버린다.
  */
-export async function splitStickers(file, { tolerance = 28, cutout = true, outline = 0 } = {}) {
+export async function splitStickers(file, { tolerance = 28, cutout = true, outline = 0, gap = 0 } = {}) {
   const img = await loadImage(file)
   const k = Math.min(1, 1600 / Math.max(img.width, img.height))
   const W = Math.max(1, Math.round(img.width * k)), H = Math.max(1, Math.round(img.height * k))
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, W, H)
-  if (cutout) removeBg(ctx, W, H, tolerance)
+  const orig = document.createElement('canvas'); orig.width = W; orig.height = H; orig.getContext('2d').drawImage(c, 0, 0)  // 손질용 원본
+  if (cutout) removeBg(ctx, W, H, tolerance, gap)
   const d = ctx.getImageData(0, 0, W, H).data
   // 4px 칸 격자로 줄여서(작은 틈 메우기) 덩어리를 찾는다
   const B = 4, gw = Math.ceil(W / B), gh = Math.ceil(H / B), grid = new Uint8Array(gw * gh)
@@ -167,13 +210,21 @@ export async function splitStickers(file, { tolerance = 28, cutout = true, outli
     if (n >= Math.max(20, gw * gh * 0.0008)) boxes.push({ x: x0 * B, y: y0 * B, w: (x1 - x0 + 1) * B, h: (y1 - y0 + 1) * B })
   }
   boxes.sort((a, b) => (a.y - b.y) || (a.x - b.x))
+  // 조각마다 { img: 최종(테두리 포함), cut: 누끼만, orig: 누끼 전 원본 } — cut·orig 는 붓으로 손질할 때 쓴다
   return boxes.map(b => {
-    const s = Math.min(1, 160 / Math.max(b.w, b.h)), out = document.createElement('canvas')
-    out.width = Math.max(1, Math.round(b.w * s)); out.height = Math.max(1, Math.round(b.h * s))
-    const o = out.getContext('2d'); o.imageSmoothingQuality = 'high'
-    o.drawImage(c, b.x, b.y, b.w, b.h, 0, 0, out.width, out.height)
-    return (outline > 0 ? addOutline(out, outline) : out).toDataURL('image/png')
+    const s = Math.min(1, 160 / Math.max(b.w, b.h)), W2 = Math.max(1, Math.round(b.w * s)), H2 = Math.max(1, Math.round(b.h * s))
+    const crop = src => { const o = document.createElement('canvas'); o.width = W2; o.height = H2; const x = o.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, b.x, b.y, b.w, b.h, 0, 0, W2, H2); return o }
+    const cut = crop(c), og = crop(orig)
+    return { img: (outline > 0 ? addOutline(cut, outline) : cut).toDataURL('image/png'), cut: cut.toDataURL('image/png'), orig: og.toDataURL('image/png') }
   })
+}
+
+/** 손질한 누끼(cut)에 흰 테두리를 다시 입혀 최종 이미지로 */
+export async function finishSticker(cutUrl, outline) {
+  if (!outline) return cutUrl
+  const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = cutUrl })
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0)
+  return addOutline(c, outline).toDataURL('image/png')
 }
 
 /** 스티커 흰 테두리: 그림 모양을 흰색으로 칠해 사방으로 조금씩 밀어 깔고, 원래 그림을 위에 올린다 */

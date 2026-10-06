@@ -47,7 +47,7 @@ export default function Books({ cat, kind = 'reading' }) {
   const toCollection = w => { act.addBook(cat.id, { title: w.text, author: '', cover: '', readAt: today() }); setWish(wish.filter(x => x.id !== w.id)) }
   const addBook = e => {
     const v = formVals(e); if (!v.title) return
-    act.addBook(cat.id, { title: v.title, author: v.author, cover, readAt: v.readAt || today() })
+    act.addBook(cat.id, { title: v.title, author: v.author, cover, readAt: v.readAt || today(), ...(S.booksHaveReviews ? { oneLine: v.oneLine || '', review: '', public: !!v.public } : {}) })
     e.currentTarget.reset(); setCover(''); setAdding(false)
   }
 
@@ -87,6 +87,10 @@ export default function Books({ cat, kind = 'reading' }) {
             <input className="inp" name="title" maxLength={80} placeholder={W.item + ' 제목'} aria-label="제목" required />
             <input className="inp" name="author" maxLength={60} placeholder={W.author} aria-label={W.author} />
             <label className="sub">{W.when} <input className="inp" name="readAt" type="date" defaultValue={today()} style={{ width: 'auto' }} /></label>
+            {S.booksHaveReviews && <>
+              <input className="inp" name="oneLine" maxLength={80} placeholder="한줄 후기 (선택)" aria-label="한줄 후기" />
+              <label className="toggle"><input type="checkbox" name="public" /> 미니홈피에 공개</label>
+            </>}
             <div className="row"><CoverPick value={cover} onChange={setCover} word={W.cover} />{cover && <button type="button" className="x" onClick={() => setCover('')}>{W.cover} 빼기</button>}
               <button className="btn pri sm">컬렉션에 담기</button></div>
             {!cover && <p className="sub">{W.cover} 없이 담으면 '{W.cover} 요청 중'으로 보이고, 관리자가 넣어 줘요.</p>}
@@ -105,10 +109,19 @@ export default function Books({ cat, kind = 'reading' }) {
       {book && (
         <div className="book-detail">
           <div className="book-cover small">{book.cover ? <img src={book.cover} alt="" /> : <span className="book-noc"><b>{book.title}</b></span>}</div>
-          <form className="addf col" style={{ flex: 1 }} onSubmit={e => { const v = formVals(e); if (v.title) act.updateBook(cat.id, book.id, { title: v.title, author: v.author, readAt: v.readAt || null }); setOpen(null) }}>
+          <form className="addf col" style={{ flex: 1 }} onSubmit={e => {
+            const v = formVals(e), pub = e.currentTarget.elements.public?.checked
+            if (v.title) act.updateBook(cat.id, book.id, { title: v.title, author: v.author, readAt: v.readAt || null, ...('public' in book ? { oneLine: v.oneLine, review: v.review, public: !!pub } : {}) })
+            setOpen(null)
+          }}>
             <input className="inp" name="title" defaultValue={book.title} maxLength={80} aria-label="제목" key={'t' + book.id} />
             <input className="inp" name="author" defaultValue={book.author} maxLength={60} placeholder={W.author} aria-label={W.author} key={'a' + book.id} />
             <label className="sub">{W.when} <input className="inp" name="readAt" type="date" defaultValue={book.readAt || ''} style={{ width: 'auto' }} key={'r' + book.id} /></label>
+            {'public' in book && <>
+              <input className="inp" name="oneLine" defaultValue={book.oneLine} maxLength={80} placeholder="한줄 후기" aria-label="한줄 후기" key={'o' + book.id} />
+              <textarea className="inp" name="review" defaultValue={book.review} rows={5} maxLength={4000} placeholder="전체 후기" aria-label="전체 후기" key={'v' + book.id} />
+              <label className="toggle"><input type="checkbox" name="public" defaultChecked={book.public} key={'p' + book.id} /> 미니홈피에 공개 <Help>공개하면 친구들이 미니홈피에서 {W.cover}·{W.when}·한줄 후기를 볼 수 있어요. 전체 후기는 나만 봐요.</Help></label>
+            </>}
             <div className="row">
               <CoverPick value={book.cover} word={W.cover} onChange={c => act.updateBook(cat.id, book.id, { cover: c })} />
               <button className="btn pri sm">저장</button>

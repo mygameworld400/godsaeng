@@ -17,6 +17,7 @@ export default function Hompy({ popup }) {
   const [more, setMore] = useState({ r: false, t: false })
   const [book, setBook] = useState(false)  // 내 다이어리 책
   const [coverPop, setCoverPop] = useState(false)  // 다이어리 표지 크게 보기
+  const [openBook, setOpenBook] = useState(null)    // 컬렉션에서 펼친 작품
   const id = S.view || S.uid, mine = id === S.uid, p = mine ? S.me : S.people[id]
   const who = [S.uid, ...S.me.friends.filter(f => S.people[f])]
 
@@ -76,7 +77,6 @@ export default function Hompy({ popup }) {
                 onClick={() => { setEdit(!edit); setEmoji(S.me.emoji); setAvatar(S.me.avatar || '') }}>✎</button>}
               <p className="nick">{p.nick}</p>
               <p className={'bio says' + (p.bio ? '' : ' none')}>{p.bio || (mine ? '한 줄 소개를 적어 보세요.' : '...')}</p>
-              {d?.mood && <span className="pill">기분 {d.mood}</span>}
             </div>
             {!mine && (
               <div className="row" style={{ marginTop: 4 }}>
@@ -86,7 +86,7 @@ export default function Hompy({ popup }) {
             )}
           </div>
           <div className="rings">
-            <CoverMini cover={(mine ? S.diaryCover : p.diaryCover) || {}} onClick={() => setCoverPop(true)} title={mine ? '내 다이어리 표지' : `${p.nick}의 다이어리 표지`} />
+            <CoverMini noText cover={(mine ? S.diaryCover : p.diaryCover) || {}} onClick={() => setCoverPop(true)} title={mine ? '내 다이어리 표지' : `${p.nick}의 다이어리 표지`} />
             <Ring pct={pc(st.rD, st.rT)} label={`루틴 ${st.rD}/${st.rT}`} size={88} />
             <Ring pct={pc(st.tD, st.tT)} label={`투두 ${st.tD}/${st.tT}`} size={88} />
           </div>
@@ -120,6 +120,27 @@ export default function Hompy({ popup }) {
         {list('r', '루틴', routines)}
         {list('t', '투두', todos)}
       </div>
+
+      {S.vbooks?.length > 0 && (() => {
+        // 활동(독서·영화…)별로 묶어서 표지만. 누르면 다 본 날짜·한줄 후기가 열리고 다시 누르면 접힌다
+        const groups = {}
+        S.vbooks.forEach(b => { (groups[b.catId] ||= []).push(b) })
+        return Object.entries(groups).map(([cid, list]) => {
+          const c = (p.cats || []).find(x => x.id === cid), base = c && S.baseCats.find(x => x.id === c.base)
+          const title = base?.kind === 'media' ? '영화·드라마 컬렉션' : base?.kind === 'reading' ? '북 컬렉션' : (c?.name || '컬렉션')
+          return (
+            <section className="sheet" key={cid}>
+              <h2><span>{title}</span><Help>공개한 작품만 보여요. 표지를 누르면 다 본 날짜와 한줄 후기가 보여요.</Help></h2>
+              <div className="shelf">{list.map(b => (
+                <button key={b.id} className={'book' + (openBook === b.id ? ' open' : '')} onClick={() => setOpenBook(openBook === b.id ? null : b.id)} title={b.title}>
+                  <span className="book-cover">{b.cover ? <img src={b.cover} alt={b.title} /> : <span className="book-noc"><b>{b.title}</b></span>}</span>
+                  {openBook === b.id && <span className="book-info"><b>{b.title}</b>{b.readAt && <small>{b.readAt.replace(/-/g, '.')}</small>}{b.oneLine && <em>“{b.oneLine}”</em>}</span>}
+                </button>
+              ))}</div>
+            </section>
+          )
+        })
+      })()}
 
       <section className="sheet">
         <h2><span>다이어리</span><Help>오늘 탭 일기에서 '공개하기'를 체크한 날의 일기가 여기에 모여요.</Help></h2>

@@ -57,14 +57,14 @@ function StickerLayer({ c, images, sel, onPick, onDrag }) {
 }
 
 /** 작은 표지 (친구 미니홈피 등에서 표지만 보여 줄 때) */
-export function CoverMini({ cover, onClick, title }) {
+export function CoverMini({ cover, onClick, title, noText }) {
   const { S } = useStore()
   const c = { ...DEFAULT, ...cover }
   const images = Object.fromEntries((S.site?.stickers || []).map(x => [x.id, x.image]))
   return (
     <button type="button" className={'cover mini pat-' + c.pattern} style={{ '--cover': c.color }} onClick={onClick} title={title} disabled={!onClick}>
       <span className="cover-spine" />
-      <Label c={c} />
+      <Label c={noText ? { ...c, title: '', sub: '' } : c} />
       <StickerLayer c={c} images={images} />
     </button>
   )

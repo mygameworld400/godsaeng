@@ -119,8 +119,11 @@ export default function Today() {
         <div className="row between">
           <h2><button className="linkh" onClick={() => setBook(true)} title="다이어리 펼치기"><span>다이어리</span></button>
             <Help>오늘 쓴 일기는 다이어리 책에 자동으로 들어가요. 제목을 누르면 다이어리가 펼쳐져요.</Help></h2>
-          <div className="moods" role="group" aria-label="오늘 기분">
-            {MOODS.map(m => <button key={m} className="mood" aria-pressed={d.mood === m} onClick={() => act.setMood(m)}>{m}</button>)}
+          <div className="row" style={{ gap: 6 }}>
+            <span className="sub">오늘의 기분 :</span>
+            <div className="moods" role="group" aria-label="오늘의 기분">
+              {MOODS.map(m => <button key={m} className="mood" aria-pressed={d.mood === m} onClick={() => act.setMood(m)}>{m}</button>)}
+            </div>
           </div>
         </div>
         <textarea className="diary" maxLength={2000} placeholder="오늘 하루는 어땠나요?" aria-label="일기"

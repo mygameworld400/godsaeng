@@ -12,7 +12,8 @@ export function buildDay(me, day, diaryText) {
   const rs = me.routines, checks = {}
   rs.forEach(r => { if (r.pub && day.checks[r.id]) checks[r.id] = true })
   return {
-    date: day.date, checks, todos: day.todos.filter(t => t.pub), mood: day.mood || '', pub: !!day.pub,
+    // 기분은 일기 쪽(본인 전용)에 두고, 일기를 공개한 날만 공개 기록에도 싣는다
+    date: day.date, checks, todos: day.todos.filter(t => t.pub), mood: day.pub ? day.mood || '' : '', pub: !!day.pub,
     diary: day.pub ? diaryText || '' : '',
     rTotal: rs.length, rDone: rs.filter(r => day.checks[r.id]).length,
     tTotal: day.todos.length, tDone: day.todos.filter(t => t.done).length,
@@ -23,7 +24,7 @@ export function buildDay(me, day, diaryText) {
 export function privDay(me, day) {
   const checks = {}
   me.routines.forEach(r => { if (day.checks[r.id]) checks[r.id] = true })
-  return { checks, todos: day.todos }
+  return { checks, todos: day.todos, mood: day.mood || '' }
 }
 
 const mk = (rD, rT, tD, tT) => {

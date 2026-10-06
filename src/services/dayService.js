@@ -16,10 +16,10 @@ export async function listDays(uid, since, until) {
 
 /** 내 기록 전체: 공개 기록에 비공개 체크·투두를 덮어쓴다. */
 export async function listMyDays(uid, since, until) {
-  let pq = supabase.from('gs_day_private').select('date,checks,todos').eq('user_id', uid).gte('date', since)
+  let pq = supabase.from('gs_day_private').select('*').eq('user_id', uid).gte('date', since)
   if (until) pq = pq.lte('date', until)
   const [pub, priv] = await Promise.all([listDays(uid, since, until), pq.then(unwrap)])
-  priv.forEach(p => { pub[p.date] = normDay({ ...pub[p.date], checks: p.checks, todos: p.todos }, p.date) })
+  priv.forEach(p => { pub[p.date] = normDay({ ...pub[p.date], checks: p.checks, todos: p.todos, ...(p.mood !== undefined && p.mood ? { mood: p.mood } : {}) }, p.date) })
   return pub
 }
 
@@ -37,7 +37,10 @@ export async function saveDay(uid, d, priv) {
     user_id: uid, date: d.date, checks: d.checks, todos: d.todos, mood: d.mood, pub: d.pub, diary: d.diary,
     r_total: d.rTotal, r_done: d.rDone, t_total: d.tTotal, t_done: d.tDone, updated_at: now,
   }))
-  unwrap(await supabase.from('gs_day_private').upsert({ user_id: uid, date: d.date, checks: priv.checks, todos: priv.todos, updated_at: now }))
+  // mood 칸(022)이 없을 때 대비: 실패하면 mood 없이 다시
+  const row = { user_id: uid, date: d.date, checks: priv.checks, todos: priv.todos, mood: priv.mood || '', updated_at: now }
+  const r = await supabase.from('gs_day_private').upsert(row)
+  if (r.error && /mood/.test(r.error.message)) { delete row.mood; unwrap(await supabase.from('gs_day_private').upsert(row)) } else unwrap(r)
 }
 
 export async function listDiaries(uid, since) {

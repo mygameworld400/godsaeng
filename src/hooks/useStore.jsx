@@ -173,14 +173,15 @@ export function StoreProvider({ children }) {
 
   /* ---------- 뷰 ---------- */
   async function setView(id) {
-    S.view = id; S.vdays = {}; S.cheers = []; bump()
+    S.view = id; S.vdays = {}; S.cheers = []; S.vbooks = []; bump()
     if (S.local) return
-    const [vd, cs] = await Promise.all([
+    const [vd, cs, vb] = await Promise.all([
       id === S.uid ? Promise.resolve({}) : days.listDays(id, addDays(today(), -14)),
       cheers.listCheers(id),
+      books.listPublicBooks(id),
     ])
     if (S.view !== id) return
-    S.vdays = vd; S.cheers = cs; bump()
+    S.vdays = vd; S.cheers = cs; S.vbooks = vb; bump()
   }
 
   const act = {
@@ -351,6 +352,9 @@ export function StoreProvider({ children }) {
       if (S.books[catId]) return
       if (S.local) { S.books[catId] = []; bump(); return }
       try { S.books[catId] = await books.listBooks(S.uid, catId) } catch { S.books[catId] = []; S.booksError = true }
+      // 후기 칸(022)이 있으면 새 책에도 후기·공개를 보낸다
+      if (S.books[catId].length) S.booksHaveReviews = 'public' in S.books[catId][0]
+      else S.booksHaveReviews = await books.hasReviewCols().catch(() => false)
       bump()
     },
     addBook(catId, b) { const x = { id: crypto.randomUUID(), ...b }; S.books[catId] = [x, ...(S.books[catId] || [])]; bump(); now(() => books.addBook(S.uid, catId, x)) },

@@ -8,7 +8,8 @@ import * as bookApi from '../services/bookService'
 import * as siteApi from '../services/siteService'
 import PlanViewer from './PlanViewer'
 import { COLORS, ConfirmX, Fold, Help, Modal, avaOf, formVals } from './common'
-import { makeIcon, makeBackground, makeCover, makeCursor, splitStickers } from '../lib/cutout'
+import { makeIcon, makeBackground, makeCover, makeCursor, splitStickers, finishSticker } from '../lib/cutout'
+import StickerEditor from './StickerEditor'
 import { readCur } from '../lib/curfile'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
@@ -373,14 +374,15 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
   const [pieces, setPieces] = useState([])   // 스티커 시트에서 찾은 조각 [{ img, on }]
   const [cut, setCut] = useState(true)
   const [sheet, setSheet] = useState(null)   // 스티커 시트 파일
-  const [sOpt, setSOpt] = useState({ cutout: true, tolerance: 28, outline: 0 })
+  const [sOpt, setSOpt] = useState({ cutout: true, tolerance: 28, outline: 0, gap: 0 })
+  const [editing, setEditing] = useState(null)  // 손질 중인 조각 번호
   const [busy, setBusy] = useState(false)
   // 시트나 옵션이 바뀌면 다시 자른다
   useEffect(() => {
     if (!sheet) return
     let live = true
     setBusy(true)
-    splitStickers(sheet, sOpt).then(imgs => { if (!live) return; setPieces(imgs.map(img => ({ img, on: true }))); if (!imgs.length) toast('스티커를 찾지 못했어요. 강도를 바꾸거나 배경 제거를 꺼 보세요.') })
+    splitStickers(sheet, sOpt).then(imgs => { if (!live) return; setPieces(imgs.map(x => ({ ...x, on: true }))); if (!imgs.length) toast('스티커를 찾지 못했어요. 강도를 바꾸거나 배경 제거를 꺼 보세요.') })
       .catch(e => toast(e.message)).finally(() => live && setBusy(false))
     return () => { live = false }
   }, [sheet, sOpt, toast])
@@ -438,15 +440,23 @@ function SiteAdmin({ code, accounts, toast, refresh }) {
       <div className="set-row">
         <label className="toggle"><input type="checkbox" checked={sOpt.cutout} onChange={e => setSOpt({ ...sOpt, cutout: e.target.checked })} /> 배경 제거</label>
         {sOpt.cutout && <label className="toggle">강도 <input type="range" min={5} max={90} value={sOpt.tolerance} onChange={e => setSOpt({ ...sOpt, tolerance: +e.target.value })} /> {sOpt.tolerance}</label>}
+        {sOpt.cutout && <label className="toggle">틈 메우기 <input type="range" min={0} max={8} value={sOpt.gap} onChange={e => setSOpt({ ...sOpt, gap: +e.target.value })} /> {sOpt.gap}px <Help>캐릭터 선이 끊겨 있어서 몸통 색까지 지워질 때 올려 보세요. 끊긴 틈을 막고 배경만 지워요.</Help></label>}
         <label className="toggle">흰 테두리 <input type="range" min={0} max={8} value={sOpt.outline} onChange={e => setSOpt({ ...sOpt, outline: +e.target.value })} /> {sOpt.outline}px</label>
       </div>
     )}
     {busy && <p className="sub">자르는 중…</p>}
     {pieces.length > 0 && <>
-      <p className="sub">{pieces.length}개를 찾았어요. 쓸 것만 남겨 주세요.</p>
+      <p className="sub">{pieces.length}개를 찾았어요. 눌러서 쓸 것만 남기고, ✎ 로 이상한 부분을 붓으로 손질할 수 있어요. (옵션을 바꾸면 손질한 것은 처음으로 돌아가요)</p>
       <div className="sticker-grid">{pieces.map((p, i) => (
-        <button key={i} className={'sticker-pick' + (p.on ? ' on' : '')} onClick={() => setPieces(pieces.map((x, j) => j === i ? { ...x, on: !x.on } : x))}><img src={p.img} alt="" /></button>
+        <span key={i} className={'sticker-pick' + (p.on ? ' on' : '')} onClick={() => setPieces(pieces.map((x, j) => j === i ? { ...x, on: !x.on } : x))}>
+          <img src={p.img} alt="" />
+          <button className="btn sm edit-dot" title="손질" onClick={e => { e.stopPropagation(); setEditing(i) }}>✎</button>
+        </span>
       ))}</div>
+      {editing !== null && pieces[editing] && (
+        <StickerEditor cut={pieces[editing].cut} orig={pieces[editing].orig} onClose={() => setEditing(null)}
+          onSave={async cut => { const img = await finishSticker(cut, sOpt.outline); setPieces(pieces.map((x, j) => j === editing ? { ...x, cut, img } : x)); setEditing(null) }} />
+      )}
       <div className="row">
         <button className="btn pri sm" onClick={async () => { await save('stickers', [...stickers, ...pieces.filter(p => p.on).map(p => ({ id: sid(), image: p.img }))], '스티커를 추가했어요.'); setPieces([]); setSheet(null) }}>골라진 {pieces.filter(p => p.on).length}개 추가</button>
         <button className="btn sm" onClick={() => { setPieces([]); setSheet(null) }}>취소</button>
