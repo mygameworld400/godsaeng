@@ -6,9 +6,20 @@ const toApp = r => normDay({
   rTotal: r.r_total, rDone: r.r_done, tTotal: r.t_total, tDone: r.t_done,
 }, r.date)
 
+/** 공개 기록 (친구도 보는 것: 공개 항목 + 개수) */
 export async function listDays(uid, since) {
   const rows = unwrap(await supabase.from('gs_days').select('*').eq('user_id', uid).gte('date', since))
   return Object.fromEntries(rows.map(r => [r.date, toApp(r)]))
+}
+
+/** 내 기록 전체: 공개 기록에 비공개 체크·투두를 덮어쓴다. */
+export async function listMyDays(uid, since) {
+  const [pub, priv] = await Promise.all([
+    listDays(uid, since),
+    supabase.from('gs_day_private').select('date,checks,todos').eq('user_id', uid).gte('date', since).then(unwrap),
+  ])
+  priv.forEach(p => { pub[p.date] = normDay({ ...pub[p.date], checks: p.checks, todos: p.todos }, p.date) })
+  return pub
 }
 
 /** 친구 여러 명의 특정 날짜 기록. {uid: day} */
@@ -18,11 +29,14 @@ export async function daysOn(uids, date) {
   return Object.fromEntries(rows.map(r => [r.user_id, toApp(r)]))
 }
 
-export async function saveDay(uid, d) {
+/** d = buildDay() 결과(공개분), priv = 전체 체크·투두 */
+export async function saveDay(uid, d, priv) {
+  const now = new Date().toISOString()
   unwrap(await supabase.from('gs_days').upsert({
     user_id: uid, date: d.date, checks: d.checks, todos: d.todos, mood: d.mood, pub: d.pub, diary: d.diary,
-    r_total: d.rTotal, r_done: d.rDone, t_total: d.tTotal, t_done: d.tDone, updated_at: new Date().toISOString(),
+    r_total: d.rTotal, r_done: d.rDone, t_total: d.tTotal, t_done: d.tDone, updated_at: now,
   }))
+  unwrap(await supabase.from('gs_day_private').upsert({ user_id: uid, date: d.date, checks: priv.checks, todos: priv.todos, updated_at: now }))
 }
 
 export async function listDiaries(uid, since) {

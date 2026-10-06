@@ -34,20 +34,22 @@ export function AvaPicker({ value, onChange }) {
   )
 }
 
-export function CatSelect({ name, cats }) {
+export function CatSelect({ name, cats, value = '' }) {
   return (
-    <select className="inp" name={name} aria-label="카테고리" defaultValue="">
+    <select className="inp" name={name} aria-label="카테고리" defaultValue={value} key={value}>
       <option value="">미분류</option>
       {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
     </select>
   )
 }
 
-/** 카테고리별로 묶어 그린다. items 에는 _done 이 있어야 한다. */
-export function Groups({ profile, items, row, empty }) {
+/** 카테고리별로 묶어 그린다. items 에는 _done 이 있어야 한다.
+    filter: '' 전체 / 'none' 미분류 / 카테고리 id */
+export function Groups({ profile, items, row, empty, filter = '' }) {
   if (!items.length) return <p className="empty">{empty}</p>
-  const cats = [...(profile.cats || []), { id: '', name: '미분류', color: '' }]
-  return cats.map(c => {
+  let cats = [...(profile.cats || []), { id: '', name: '미분류', color: '' }]
+  if (filter) cats = cats.filter(c => filter === 'none' ? !c.id : c.id === filter)
+  const out = cats.map(c => {
     const list = items.filter(i => c.id ? i.cat === c.id : !catOf(profile, i.cat))
     if (!list.length) return null
     return (
@@ -59,7 +61,13 @@ export function Groups({ profile, items, row, empty }) {
         {list.map(row)}
       </div>
     )
-  })
+  }).filter(Boolean)
+  return out.length ? out : <p className="empty">이 카테고리에는 아직 아무것도 없어요.</p>
+}
+
+/** 공개/비공개 토글 */
+export function PubToggle({ on, onClick }) {
+  return <button type="button" className="pubt" aria-pressed={!!on} onClick={onClick}>{on ? '공개' : '비공개'}</button>
 }
 
 export function Ring({ pct, label }) {

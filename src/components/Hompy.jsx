@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { WD, today, addDays, toD, pretty } from '../lib/date'
-import { stat, streak } from '../lib/stats'
+import { stat, streak, pc } from '../lib/stats'
 import { AvaPicker, ConfirmX, Groups, Ring, avaOf, nickOf, formVals } from './common'
 
 export default function Hompy() {
   const { S, act } = useStore()
   const [edit, setEdit] = useState(false)
   const [emoji, setEmoji] = useState(S.me.emoji)
+  const [open, setOpen] = useState({ r: false, t: false })
   const id = S.view || S.uid, mine = id === S.uid, p = mine ? S.me : S.people[id]
   const who = [S.uid, ...S.me.friends.filter(f => S.people[f])]
 
@@ -22,11 +23,12 @@ export default function Hompy() {
   )
   if (!p) return <div className="stack">{switcher}<div className="sheet"><p className="empty">이 친구의 미니홈피를 찾지 못했어요.</p></div></div>
 
-  const days = mine ? S.days : S.vdays, t = today(), d = days[t], st = stat(p, d, true), sk = streak(days, p)
+  const days = mine ? S.days : S.vdays, t = today(), d = days[t], st = stat(p, d, mine), sk = streak(days, p, mine)
   const week = []
   for (let i = 6; i >= 0; i--) { const dt = addDays(t, -i); week.push({ dt, s: i === 0 ? st : stat(p, days[dt], false) }) }
-  const routines = (p.routines || []).map(r => ({ ...r, _done: !!d?.checks?.[r.id] }))
-  const todos = (d?.todos || []).map(x => ({ ...x, _done: !!x.done }))
+  // 친구 것은 원래 공개 항목만 내려온다. 내 것도 미니홈피에서는 공개 항목만 보여 준다.
+  const routines = (p.routines || []).filter(r => r.pub).map(r => ({ ...r, _done: !!d?.checks?.[r.id] }))
+  const todos = (d?.todos || []).filter(x => x.pub).map(x => ({ ...x, _done: !!x.done }))
   const pubs = Object.values(days).filter(x => x?.pub && x.diary).sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 3)
   const isFriend = S.me.friends.includes(id)
 
@@ -36,6 +38,27 @@ export default function Hompy() {
     act.saveProfile({ nick: v.nick, bio: v.bio, emoji })
     setEdit(false)
   }
+  const ro = i => (
+    <div key={i.id} className={'item ro' + (i._done ? ' done' : '')}>
+      <span className="mark">{i._done ? '✓' : ''}</span><span className="t">{i.text}</span>
+    </div>
+  )
+  // 렌더 함수로 쓴다 (컴포넌트로 만들면 매 렌더마다 새 타입이라 다시 마운트됨)
+  const acc = ({ k, label, done, tot, items }) => (
+    <section className="sheet">
+      <button className="acc" aria-expanded={open[k]} onClick={() => setOpen({ ...open, [k]: !open[k] })}>
+        <span className="row between"><span className="sub">오늘 {label} 달성률</span><span className="pill"><b>{done}/{tot}</b> 완료</span></span>
+        <span className="big">{pc(done, tot)}%</span>
+        <span className="meter" aria-hidden="true"><i style={{ width: pc(done, tot) + '%' }} /></span>
+        <span className="more">{open[k] ? '접기 ▴' : '눌러서 자세히 보기 ▾'}</span>
+      </button>
+      {open[k] && <>
+        <p className="sub">공개로 설정한 {label}만 보여요. (공개 {items.length}개 / 전체 {tot}개)</p>
+        <Groups profile={p} items={items} row={ro}
+          empty={mine ? `공개한 ${label}가 없어요. 오늘 탭에서 항목 옆의 비공개를 눌러 공개로 바꿀 수 있어요.` : `공개한 ${label}가 없어요.`} />
+      </>}
+    </section>
+  )
   const cheer = e => { const v = formVals(e); if (v.text) { act.addCheer(v.text); e.currentTarget.reset() } }
 
   return (
@@ -49,8 +72,6 @@ export default function Hompy() {
             <p className="bio">{p.bio || (mine ? '한 줄 소개를 적어 보세요.' : '한 줄 소개가 아직 없어요.')}</p>
             <div className="stats" style={{ marginTop: 8 }}>
               <span className="pill">연속 <b>{sk}일</b></span>
-              <span className="pill">오늘 루틴 <b>{st.rD}/{st.rT}</b></span>
-              <span className="pill">오늘 투두 <b>{st.tD}/{st.tT}</b></span>
               {d?.mood && <span className="pill">기분 {d.mood}</span>}
             </div>
           </div>
@@ -76,6 +97,11 @@ export default function Hompy() {
       </section>
 
       <div className="cols">
+        {acc({ k: 'r', label: '루틴', done: st.rD, tot: st.rT, items: routines })}
+        {acc({ k: 't', label: '투두', done: st.tD, tot: st.tT, items: todos })}
+      </div>
+
+      <div className="cols">
         <section className="sheet">
           <h2><span>최근 7일 달성률</span></h2>
           <div className="week">
@@ -85,16 +111,6 @@ export default function Hompy() {
               </div>
             ))}
           </div>
-        </section>
-        <section className="sheet">
-          <h2><span>오늘 해낸 것</span></h2>
-          <Groups profile={p} items={[...routines, ...todos]}
-            empty={mine ? '오늘 탭에서 루틴과 투두를 넣으면 여기에 자랑할 거리가 쌓여요.' : '오늘은 아직 기록이 없어요.'}
-            row={i => (
-              <div key={i.id} className={'item ro' + (i._done ? ' done' : '')}>
-                <span className="mark">{i._done ? '✓' : ''}</span><span className="t">{i.text}</span>
-              </div>
-            )} />
         </section>
       </div>
 

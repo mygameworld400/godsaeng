@@ -4,6 +4,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
 import { webcrypto } from 'node:crypto'
+import { buildDay, privDay, normDay } from '../src/lib/stats.js'
 
 const readEnv = f => { try { return Object.fromEntries(readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.includes('=')).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()])) } catch { return {} } }
 const env = { ...readEnv('.env.local'), ...readEnv('.env.test.local') }
@@ -43,19 +44,38 @@ try {
   console.log('프로필 / 하루 기록')
   const pa = await A.sb.from('gs_profiles').select('*').eq('id', A.id).single()
   ok(pa.data?.handle === A.h && pa.data?.cats.length === 3, '가입 시 프로필 + 기본 카테고리 3개 생성')
-  const rid = 'r1'
-  ok(!(await A.sb.from('gs_profiles').update({ routines: [{ id: rid, text: '스트레칭', cat: '' }], friends: [B.id] }).eq('id', A.id)).error, 'A 루틴 추가 + B 친구 추가')
-  const day = { user_id: A.id, date: today, checks: { [rid]: true }, todos: [{ id: 't1', text: '과제', cat: '', done: false }], pub: true, diary: '공개 일기', r_total: 1, r_done: 1, t_total: 1, t_done: 0 }
-  ok(!(await A.sb.from('gs_days').upsert(day)).error, 'A 오늘 기록 저장')
+  // 앱과 같은 방식으로 저장: 공개분은 buildDay, 전체는 privDay (src/hooks/useStore.jsx saveMe/saveDay)
+  const me = { routines: [{ id: 'r1', text: '공개루틴-스트레칭', cat: '', pub: true }, { id: 'r2', text: '비밀루틴-약먹기', cat: '', pub: false }] }
+  const day = normDay({ checks: { r1: true, r2: true }, todos: [
+    { id: 't1', text: '공개투두-과제', cat: '', done: true, pub: true },
+    { id: 't2', text: '비밀투두-병원', cat: '', done: false, pub: false },
+  ], pub: true }, today)
+  const pubDay = buildDay(me, day, '공개 일기'), priv = privDay(me, day)
+  ok(!(await A.sb.from('gs_profiles').update({ routines: me.routines.filter(r => r.pub), r_count: 2, friends: [B.id] }).eq('id', A.id)).error, 'A 프로필에 공개 루틴만 + B 친구 추가')
+  ok(!(await A.sb.from('gs_private').upsert({ user_id: A.id, routines: me.routines })).error, 'A 전체 루틴은 비공개 테이블에')
+  const row = { user_id: A.id, date: today, checks: pubDay.checks, todos: pubDay.todos, pub: true, diary: pubDay.diary, r_total: pubDay.rTotal, r_done: pubDay.rDone, t_total: pubDay.tTotal, t_done: pubDay.tDone }
+  ok(!(await A.sb.from('gs_days').upsert(row)).error, 'A 오늘 공개 기록 저장')
+  ok(!(await A.sb.from('gs_day_private').upsert({ user_id: A.id, date: today, ...priv })).error, 'A 오늘 전체 기록 저장')
   ok(!(await A.sb.from('gs_diaries').upsert({ user_id: A.id, date: today, text: '비밀 원문' })).error, 'A 일기 원문 저장')
+  const back = (await A.sb.from('gs_day_private').select('*').eq('user_id', A.id).single()).data
+  ok(back?.todos.length === 2 && back?.checks.r2, 'A 는 자기 비공개 항목까지 다시 불러옴')
 
   console.log('친구가 보는 것')
-  const seen = await B.sb.from('gs_days').select('*').eq('user_id', A.id).eq('date', today)
-  ok(seen.data?.[0]?.diary === '공개 일기', 'B 가 A 의 오늘 기록·공개 일기를 봄')
+  const seen = (await B.sb.from('gs_days').select('*').eq('user_id', A.id).eq('date', today)).data?.[0]
+  ok(seen?.diary === '공개 일기', 'B 가 A 의 공개 일기를 봄')
+  ok(seen?.r_done === 2 && seen?.r_total === 2 && seen?.t_done === 1 && seen?.t_total === 2, 'B 가 보는 달성 개수에는 비공개 항목도 포함 (루틴 2/2, 투두 1/2)')
+  const profA = (await B.sb.from('gs_profiles').select('*').eq('id', A.id).single()).data
+  const leak = JSON.stringify([seen, profA])
+  ok(leak.includes('공개루틴-스트레칭') && leak.includes('공개투두-과제'), 'B 에게 공개 항목 이름은 보임')
+  ok(!leak.includes('비밀루틴') && !leak.includes('비밀투두') && !leak.includes('r2'), 'B 에게 비공개 항목 이름·id 는 전달 안 됨')
+  ok((await B.sb.from('gs_private').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 전체 루틴 테이블을 못 봄')
+  ok((await B.sb.from('gs_day_private').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 전체 기록 테이블을 못 봄')
   const secret = await B.sb.from('gs_diaries').select('*').eq('user_id', A.id)
   ok(secret.data?.length === 0, 'B 는 A 의 일기 원문을 못 봄')
-  const hack = await B.sb.from('gs_days').upsert({ ...day, diary: '해킹' })
+  const hack = await B.sb.from('gs_days').upsert({ ...row, diary: '해킹' })
   ok(!!hack.error, 'B 는 A 의 기록을 못 고침')
+  const hackPriv = await B.sb.from('gs_day_private').upsert({ user_id: A.id, date: today, checks: {}, todos: [] })
+  ok(!!hackPriv.error, 'B 는 A 의 비공개 기록을 못 덮어씀')
   const hackP = await B.sb.from('gs_profiles').update({ nick: '해킹' }).eq('id', A.id).select()
   ok(!hackP.data?.length, 'B 는 A 의 프로필을 못 고침')
 

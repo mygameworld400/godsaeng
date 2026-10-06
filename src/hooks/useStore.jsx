@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { hasServer } from '../lib/supabase'
 import { today, addDays } from '../lib/date'
-import { rid, normDay, buildDay } from '../lib/stats'
+import { rid, normDay, buildDay, privDay } from '../lib/stats'
 import * as auth from '../services/authService'
 import * as profiles from '../services/profileService'
 import * as days from '../services/dayService'
@@ -48,10 +48,11 @@ export function StoreProvider({ children }) {
 
   async function loadAll() {
     const uid = S.uid, since = addDays(today(), -45)
-    const [p, d, di, ch] = await Promise.all([
-      profiles.listProfiles(), days.listDays(uid, since), days.listDiaries(uid, since), bets.listBets(),
+    const [p, routines, d, di, ch] = await Promise.all([
+      profiles.listProfiles(), profiles.myRoutines(uid), days.listMyDays(uid, since), days.listDiaries(uid, since), bets.listBets(),
     ])
-    S.people = p; S.me = p[uid] ? structuredClone(p[uid]) : null
+    S.people = p
+    S.me = p[uid] ? { ...structuredClone(p[uid]), routines: routines ?? p[uid].routines } : null
     S.days = d; S.diary = di; S.ch = ch
     await loadFriendDays()
     if (S.me && !S.view) await setView(uid)
@@ -86,8 +87,8 @@ export function StoreProvider({ children }) {
   }
   const myDay = date => S.days[date] || (S.days[date] = normDay({}, date))
   const saveDay = date => {
-    const built = buildDay(S.me, myDay(date), S.diary[date])
-    later('day:' + date, () => days.saveDay(S.uid, built))
+    const day = myDay(date), built = buildDay(S.me, day, S.diary[date]), priv = structuredClone(privDay(S.me, day))
+    later('day:' + date, () => days.saveDay(S.uid, built, priv))
   }
 
   /* ---------- 뷰 ---------- */
@@ -121,12 +122,14 @@ export function StoreProvider({ children }) {
       S.me.cats.push({ id: rid(), name, color: 'c' + (S.me.cats.length % 6 + 1) }); saveMe(); bump()
     },
     delCat(id) { S.me.cats = S.me.cats.filter(c => c.id !== id); saveMe(); bump() },
-    addRoutine(text, cat) { S.me.routines.push({ id: rid(), text, cat }); saveMe(); saveDay(today()); bump() },
+    addRoutine(text, cat) { S.me.routines.push({ id: rid(), text, cat, pub: false }); saveMe(); saveDay(today()); bump() },
+    togglePubRoutine(id) { const r = S.me.routines.find(x => x.id === id); if (r) { r.pub = !r.pub; saveMe(); saveDay(today()); bump() } },
     delRoutine(id) { S.me.routines = S.me.routines.filter(r => r.id !== id); saveMe(); saveDay(today()); bump() },
 
     setDate(n) { S.date = n ? addDays(S.date, n) : today(); bump() },
     toggleRoutine(id, on) { const d = myDay(S.date); if (on) d.checks[id] = true; else delete d.checks[id]; saveDay(S.date); bump() },
-    addTodo(text, cat) { myDay(S.date).todos.push({ id: rid(), text, cat, done: false }); saveDay(S.date); bump() },
+    addTodo(text, cat) { myDay(S.date).todos.push({ id: rid(), text, cat, done: false, pub: false }); saveDay(S.date); bump() },
+    togglePubTodo(id) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) { t.pub = !t.pub; saveDay(S.date); bump() } },
     toggleTodo(id, on) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) t.done = on; saveDay(S.date); bump() },
     delTodo(id) { const d = myDay(S.date); d.todos = d.todos.filter(t => t.id !== id); saveDay(S.date); bump() },
     setMood(m) { const d = myDay(S.date); d.mood = d.mood === m ? '' : m; saveDay(S.date); bump() },

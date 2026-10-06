@@ -128,6 +128,13 @@ select.inp{width:auto;max-width:130px}
 .cheer:last-child{border-bottom:0}
 .cheer p{margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
 .cheer small{color:var(--muted)}
+.chipb{border:0;background:none;padding:0;display:inline-flex;align-items:center;gap:6px;color:inherit}
+.pubt{border:1.5px solid var(--line);background:var(--paper);color:var(--muted);border-radius:999px;padding:1px 9px;font-size:12px;white-space:nowrap;flex:none}
+.pubt[aria-pressed="true"]{border-color:var(--ink);background:var(--hl);color:var(--on-hl)}
+.acc{display:flex;flex-direction:column;gap:10px;border:0;background:none;padding:0;text-align:left;width:100%}
+.acc .big{font-family:var(--f-display);font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.acc .meter{flex:none;width:100%;height:14px}
+.acc .more{color:var(--accent);font-size:13.5px}
 .emo{display:flex;flex-wrap:wrap;gap:4px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:999px;padding:8px 18px;font-size:14px;max-width:calc(100% - 32px)}
 @media (max-width:480px){.brand{font-size:28px}.sheet{padding:14px}.ring{width:108px;height:108px}}

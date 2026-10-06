@@ -11,7 +11,7 @@ export default function Friends() {
   const t = today()
   const rows = [
     { id: S.uid, s: stat(S.me, S.days[t], true) },
-    ...mineF.filter(id => S.people[id]).map(id => ({ id, s: stat(S.people[id], S.fday[id], true) })),
+    ...mineF.filter(id => S.people[id]).map(id => ({ id, s: stat(S.people[id], S.fday[id], false) })),
   ].sort((a, b) => b.s.pct - a.s.pct)
 
   const Person = ({ id, children }) => (

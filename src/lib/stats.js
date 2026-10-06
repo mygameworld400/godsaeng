@@ -1,4 +1,4 @@
-import { today, addDays, diff } from './date'
+import { today, addDays, diff } from './date.js'
 
 export const rid = () => Math.random().toString(36).slice(2, 9)
 
@@ -7,16 +7,23 @@ export const normDay = (d, date) => ({
   rTotal: d.rTotal || 0, rDone: d.rDone || 0, tTotal: d.tTotal || 0, tDone: d.tDone || 0,
 })
 
-/** 저장용 하루 문서. 지운 루틴의 체크는 버리고 집계값을 같이 넣는다. */
+/** 친구에게 공유되는 하루 문서. 공개 항목과 개수만 들어간다 (비공개 항목 이름은 빠짐). */
 export function buildDay(me, day, diaryText) {
-  const ids = me.routines.map(r => r.id), checks = {}
-  ids.forEach(i => { if (day.checks[i]) checks[i] = true })
+  const rs = me.routines, checks = {}
+  rs.forEach(r => { if (r.pub && day.checks[r.id]) checks[r.id] = true })
   return {
-    date: day.date, checks, todos: day.todos, mood: day.mood || '', pub: !!day.pub,
+    date: day.date, checks, todos: day.todos.filter(t => t.pub), mood: day.mood || '', pub: !!day.pub,
     diary: day.pub ? diaryText || '' : '',
-    rTotal: ids.length, rDone: Object.keys(checks).length,
+    rTotal: rs.length, rDone: rs.filter(r => day.checks[r.id]).length,
     tTotal: day.todos.length, tDone: day.todos.filter(t => t.done).length,
   }
+}
+
+/** 본인만 보는 전체 체크·투두. 지운 루틴의 체크는 버린다. */
+export function privDay(me, day) {
+  const checks = {}
+  me.routines.forEach(r => { if (day.checks[r.id]) checks[r.id] = true })
+  return { checks, todos: day.todos }
 }
 
 const mk = (rD, rT, tD, tT) => {
@@ -24,19 +31,22 @@ const mk = (rD, rT, tD, tT) => {
   return { rD, rT, tD, tT, tot, done, pct: tot ? Math.round(done / tot * 100) : 0 }
 }
 
-/** 달성률. live 면 프로필의 현재 루틴 개수를 분모로 다시 센다. */
+export const pc = (a, b) => b ? Math.round(a / b * 100) : 0
+
+/** 달성률. live(=내 것)면 전체 루틴·투두로 다시 센다.
+    친구 것은 공개 항목만 받으므로 저장된 개수를 쓰고, 기록 없는 날은 rCount 를 분모로. */
 export function stat(profile, day, live) {
   if (live && profile) {
     const ids = (profile.routines || []).map(r => r.id), c = day?.checks || {}, td = day?.todos || []
     return mk(ids.filter(i => c[i]).length, ids.length, td.filter(t => t.done).length, td.length)
   }
-  if (!day) return mk(0, 0, 0, 0)
+  if (!day) return mk(0, profile?.rCount || 0, 0, 0)
   return mk(day.rDone || 0, day.rTotal || 0, day.tDone || 0, day.tTotal || 0)
 }
 
-export function streak(days, profile) {
+export function streak(days, profile, live) {
   let n = 0, d = today()
-  if (stat(profile, days[d], true).done > 0) n = 1
+  if (stat(profile, days[d], live).done > 0) n = 1
   d = addDays(d, -1)
   while (days[d] && (days[d].rDone || 0) + (days[d].tDone || 0) > 0) { n++; d = addDays(d, -1) }
   return n
