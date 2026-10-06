@@ -13,10 +13,11 @@ import { Help, Modal, nickOf } from './common'
 export const RESULTS = [['ok', '성공', '😆'], ['meh', '애매', '😐'], ['fail', '실패', '😵']]
 const FALLBACK = { default: '🙂', ok: '😆', meh: '😐', fail: '😵' }
 
-export function Face({ kind, size = 40 }) {
+// 올린 캐릭터는 프레임 없이 그대로 크게, 없으면 이모지
+export function Face({ kind, size = 60 }) {
   const { S } = useStore()
   const img = S.site?.miracle?.[kind]
-  return <span className="face" style={{ width: size, height: size, fontSize: size * 0.62 }}>{img ? <img src={img} alt="" /> : FALLBACK[kind]}</span>
+  return <span className={'face' + (img ? ' img' : '')} style={{ width: size, height: size, fontSize: size * 0.62 }}>{img ? <img src={img} alt="" /> : FALLBACK[kind]}</span>
 }
 
 /** 목표 취침·기상 시간 정하기 (참여할 때, 그리고 나중에 수정) */
@@ -111,7 +112,7 @@ export default function MiracleBoard({ q }) {
             </div>
             <div className="row" role="radiogroup" aria-label="결과">
               {RESULTS.map(([k, l]) => (
-                <label key={k} className="mres"><input type="radio" name="result" value={k} defaultChecked={myLog?.result === k} /><Face kind={k} size={48} /><span>{l}</span></label>
+                <label key={k} className="mres"><input type="radio" name="result" value={k} defaultChecked={myLog?.result === k} /><Face kind={k} size={72} /><span>{l}</span></label>
               ))}
             </div>
             <div className="row">

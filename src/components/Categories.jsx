@@ -6,6 +6,7 @@ import QuestPage, { PlanScreen, questCat } from './QuestPage'
 import Ledger from './Ledger'
 import Books from './Books'
 import WorkoutCal from './WorkoutCal'
+import KnowledgeScreen from './knowledge/KnowledgeScreen'
 
 /* 활동 탭. 내 활동(담은 기본 + 직접 만든 개별)을 내가 정한 순서로 한 목록에 보여 준다.
    기본 활동(관리자가 정한 것)은 '추천 활동' 버튼을 눌러야 보이고, 눌러서 담는다.
@@ -153,6 +154,8 @@ function CatPage({ id }) {
   const isLedger = kind === 'ledger'
   const isBase = !!cat.base  // 기본 활동은 이름·아이콘을 관리자가 정한다 (빼기만 가능)
   const routines = S.me.routines.filter(r => r.cat === id)
+  // '상식' 페이지는 기본 구성(목표·투두) 없이 전용 전체 화면
+  if (kind === 'knowledge') return <KnowledgeScreen back={() => goCat()} />
 
   const saveInfo = e => {
     const v = formVals(e)
