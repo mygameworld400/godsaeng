@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
-import { WD, today, addDays, toD, pretty } from '../lib/date'
+import { WD, today, addDays, toD, pretty, localDate } from '../lib/date'
 import { stat, streak, pc } from '../lib/stats'
 import { AvaPicker, ConfirmX, Groups, Ring, avaOf, nickOf, formVals } from './common'
 
@@ -131,7 +131,7 @@ export default function Hompy() {
           {S.cheers.length ? S.cheers.map(c => (
             <div className="cheer" key={c.id}>
               <div className="ava s">{avaOf(S, c.from)}</div>
-              <p><b>{nickOf(S, c.from)}</b> <small>{(c.at || '').slice(0, 10).replace(/-/g, '.')}</small><br />{c.text}</p>
+              <p><b>{nickOf(S, c.from)}</b> <small>{localDate(c.at)}</small><br />{c.text}</p>
               {(c.from === S.uid || mine) && <ConfirmX onConfirm={() => act.delCheer(c.id)} />}
             </div>
           )) : <p className="empty">아직 방명록이 비어 있어요. 첫 글을 남겨 보세요.</p>}

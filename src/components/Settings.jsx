@@ -4,11 +4,12 @@ import * as admin from '../services/adminService'
 import * as categories from '../services/categoryService'
 import { COLORS, CatIcon, ConfirmX, formVals } from './common'
 import { explain } from './Login'
+import { localDateTime } from '../lib/date'
 
 /* 설정: 화면 설정(추후 폰트 등) + 관리자 모드.
    관리자 코드는 이 화면 state 에만 들고 있다가 함수 호출마다 같이 보낸다 (새로고침하면 다시 입력). */
 
-const fmt = s => s ? s.slice(0, 16).replace('T', ' ').replace(/-/g, '.') : '-'
+const fmt = s => localDateTime(s) || '-'
 
 function AccountRow({ a, code, onDone, toast }) {
   const [edit, setEdit] = useState(false)
