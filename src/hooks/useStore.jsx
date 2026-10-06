@@ -10,6 +10,7 @@ import * as bets from '../services/betService'
 import * as categories from '../services/categoryService'
 import * as events from '../services/eventService'
 import * as quests from '../services/questService'
+import * as notes from '../services/noteService'
 
 /* 전역 상태는 이 파일 하나에 모은다. 컴포넌트는 Supabase 를 직접 부르지 않는다.
    상태는 ref 하나에 두고 변경 후 bump() 로 다시 그린다 (원본 아티팩트 구조를 그대로 옮김).
@@ -31,7 +32,7 @@ export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], bubbleOpen: readBubble(),
+  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], notes: null, bubbleOpen: readBubble(),
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -118,7 +119,7 @@ export function StoreProvider({ children }) {
       const ok = session?.user?.email?.endsWith('@godsaeng.local')
       const uid = ok ? session.user.id : null
       if (uid === S.uid) { bump(); return }
-      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {}, allDiaries: false, diaryCover: undefined })
+      Object.assign(S, { uid, loaded: false, me: null, view: null, people: {}, days: {}, diary: {}, ch: {}, fday: {}, catDetails: {}, months: {}, events: {}, allDiaries: false, diaryCover: undefined, notes: null })
       bump()
       if (uid) loadAll().catch(e => { S.loaded = true; onErr(e) })
     }
@@ -277,6 +278,25 @@ export function StoreProvider({ children }) {
       for (const k in all) if (!(k in S.diary)) S.diary[k] = all[k]
       S.allDiaries = true; bump()
     },
+    /** 메모·낙서 장 (다이어리 책을 펼칠 때 불러옴). 테이블(017) 전이면 notesError */
+    async loadNotes() {
+      if (S.notes) return
+      if (S.local) { S.notes = []; bump(); return }
+      try { S.notes = await notes.listNotes(S.uid) } catch { S.notes = []; S.notesError = true }
+      bump()
+    },
+    addNote(kind) {
+      const n = { id: crypto.randomUUID(), kind, sort: Date.now() % 2e9, body: '' }
+      S.notes = [...(S.notes || []), n]; bump()
+      now(() => notes.addNote(S.uid, n))
+      return n
+    },
+    saveNote(id, body) {
+      const n = S.notes?.find(x => x.id === id); if (!n) return
+      n.body = body; bump()
+      later('note:' + id, () => notes.saveNote(id, body))
+    },
+    delNote(id) { S.notes = S.notes.filter(x => x.id !== id); bump(); now(() => notes.removeNote(id)) },
     setDiaryCover(patch) { S.diaryCover = { ...S.diaryCover, ...patch }; saveMe(); bump() },
     setDiary(text) {
       const date = S.date

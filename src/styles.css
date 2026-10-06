@@ -321,19 +321,18 @@ button.plan-sound{cursor:pointer}
 .spread.one{grid-template-columns:1fr;width:min(560px,96vw)}
 .spread::after{content:"";position:absolute;top:10px;bottom:10px;left:50%;width:2px;background:rgba(0,0,0,.15);box-shadow:0 0 12px rgba(0,0,0,.25)}
 .spread.one::after{display:none}
-.leaf{position:relative;background:#FFFDF6;color:#1B2440;padding:22px 26px 34px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-width:0;
+.leaf{position:relative;background:#FFFDF6;color:#1B2440;padding:22px 26px 64px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-width:0;
   background-image:repeating-linear-gradient(transparent 0 33px,#E3DCCB 33px 34px);background-position:0 62px}
 .leaf.left{border-radius:6px 0 0 6px;box-shadow:inset -14px 0 18px -14px rgba(0,0,0,.25)}
 .leaf.right{border-radius:0 6px 6px 0;box-shadow:inset 14px 0 18px -14px rgba(0,0,0,.25)}
 .spread.one .leaf.right{border-radius:6px}
 .leaf.blank{background-image:none}
 .leaf .paper-head{font-size:20px}
+.leaf .paper-text.ro{white-space:pre-wrap;overflow:hidden;margin:0}
 .leaf .paper-text{flex:1;border:0;background:transparent;resize:none;font-family:var(--f-hand);font-size:22px;line-height:34px;color:inherit;outline:none;cursor:text}
 .leaf .paper-no{position:absolute;bottom:10px;font-size:12px;color:#8A8270}
 .leaf.left .paper-no{left:18px}
 .leaf.right .paper-no{right:18px}
-.spread.flip-next .leaf.right{animation:leafNext .42s ease}
-.spread.flip-prev .leaf.left{animation:leafPrev .42s ease}
 @keyframes leafNext{from{transform:rotateY(-80deg);transform-origin:left center;opacity:.4}to{transform:none;opacity:1}}
 @keyframes leafPrev{from{transform:rotateY(80deg);transform-origin:right center;opacity:.4}to{transform:none;opacity:1}}
 .plan-screen{position:fixed;inset:0;z-index:40;overflow:auto;background:var(--bg);
@@ -342,6 +341,56 @@ button.plan-sound{cursor:pointer}
 .plan-bar b{font-family:var(--f-display);font-weight:400;font-size:20px}
 .plan-body{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
 .mode-btn.pri{background:var(--hl);color:var(--on-hl)}
+.leaf.plain{background-image:none}
+.spread.one.flip-next .leaf.right{animation:leafNext .7s ease}
+.spread.one.flip-prev .leaf.right{animation:leafPrev .7s ease}
+/* 아래쪽 넘기기 영역: 왼쪽 장 아래 = 앞장, 오른쪽 장 아래 = 뒷장. 가까이 가면 종이 귀퉁이가 살짝 들린다 */
+.corner{position:absolute;bottom:0;height:56px;width:100%;border:0;background:none;cursor:pointer;z-index:3;display:flex;align-items:flex-end;padding:0 12px 8px}
+.corner.left{left:0;justify-content:flex-start}
+.corner.right{right:0;justify-content:flex-end}
+.corner span{font-size:22px;color:#B7AE98;transition:transform .2s,color .2s}
+.corner::after{content:"";position:absolute;bottom:0;width:0;height:0;transition:all .2s}
+.corner.right::after{right:0;border-bottom:0 solid #E6DFCC;border-left:0 solid transparent}
+.corner.left::after{left:0;border-bottom:0 solid #E6DFCC;border-right:0 solid transparent}
+.corner:hover span{color:#1B2440;transform:scale(1.2)}
+.corner.right:hover::after{border-bottom-width:38px;border-left-width:38px;box-shadow:-3px -3px 6px rgba(0,0,0,.12)}
+.corner.left:hover::after{border-bottom-width:38px;border-right-width:38px;box-shadow:3px -3px 6px rgba(0,0,0,.12)}
+/* 넘어가는 종이: 책등을 축으로 앞면(지금 장) → 뒷면(다음 장) */
+.turner{position:absolute;top:10px;bottom:10px;width:calc(50% - 10px);transform-style:preserve-3d;z-index:5;pointer-events:none}
+.turner.next{left:50%;transform-origin:left center;animation:turnNext .7s cubic-bezier(.45,.05,.35,1) forwards}
+.turner.prev{left:10px;transform-origin:right center;animation:turnPrev .7s cubic-bezier(.45,.05,.35,1) forwards}
+.turner .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex}
+.turner .face>.leaf{flex:1}
+.turner .face.back{transform:rotateY(180deg)}
+.turner .face::after{content:"";position:absolute;inset:0;pointer-events:none;animation:turnShade .7s ease forwards}
+.turner.next .face.front::after{background:linear-gradient(90deg,rgba(0,0,0,.25),transparent 40%)}
+.turner.next .face.back::after{background:linear-gradient(270deg,rgba(0,0,0,.25),transparent 40%)}
+.turner.prev .face.front::after{background:linear-gradient(270deg,rgba(0,0,0,.25),transparent 40%)}
+.turner.prev .face.back::after{background:linear-gradient(90deg,rgba(0,0,0,.25),transparent 40%)}
+@keyframes turnNext{0%{transform:rotateY(0)}100%{transform:rotateY(-180deg)}}
+@keyframes turnPrev{0%{transform:rotateY(0)}100%{transform:rotateY(180deg)}}
+@keyframes turnShade{0%{opacity:0}50%{opacity:1}100%{opacity:0}}
+/* 책갈피 */
+.marks{position:absolute;right:-34px;top:48px;display:flex;flex-direction:column;gap:8px;z-index:6}
+.mark{writing-mode:vertical-rl;border:0;border-radius:0 8px 8px 0;padding:12px 7px;font-family:var(--f-display);font-size:15px;color:#fff;cursor:pointer;
+  box-shadow:2px 2px 0 rgba(0,0,0,.2);transform:translateX(-6px);transition:transform .15s}
+.mark:hover,.mark.on{transform:translateX(0)}
+.mark-diary{background:#E5534B}.mark-memo{background:#2E9E6B}.mark-doodle{background:#E08A1E}
+.spread.one .marks{right:-30px}
+/* 낙서·새 장·날짜 이동 */
+.doodle{position:relative;flex:1;min-height:0}
+.doodle canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.doodle-clear{position:absolute;right:0;top:-30px}
+.doodle-img{flex:1;min-height:0;object-fit:contain;object-position:top left;width:100%}
+.add-page{flex:1;display:grid;place-items:center}
+.jump-btn{margin-left:auto}
+.jump{position:absolute;top:56px;left:50%;transform:translateX(-50%);z-index:8;background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);border-radius:14px;
+  box-shadow:3px 3px 0 var(--ink);padding:12px;display:flex;flex-direction:column;gap:8px;width:280px}
+.jump-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.jd{border:0;background:none;border-radius:6px;padding:4px 0;color:var(--muted);opacity:.45;cursor:default;font-variant-numeric:tabular-nums}
+.jd.on{opacity:1;color:var(--ink);font-weight:700;cursor:pointer;background:var(--soft)}
+.jd.on:hover{background:var(--hl)}
+.jd.cur{box-shadow:inset 0 0 0 2px var(--accent)}
 .recs{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mitem{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;border-radius:12px;padding:4px 2px;border:1.5px dashed var(--line)}
 .mitem.dragging{opacity:.4}

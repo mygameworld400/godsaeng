@@ -200,6 +200,13 @@ try {
   ok(!!(await B.sb.from('gs_quest_members').insert({ quest_id: qid.data, user_id: A.id })).error, 'B 가 A 이름으로 참여 못 함')
   ok(!(await adm('gs_admin_quest_delete', { p_id: qid.data })).error, '관리자가 챌린지 삭제 (참여 기록도 함께)')
 
+  console.log('메모·낙서')
+  const note = await A.sb.from('gs_notes').insert({ user_id: A.id, kind: 'memo', body: '비밀 메모' }).select().single()
+  ok(!note.error, 'A 메모 장 추가')
+  ok(!(await A.sb.from('gs_notes').insert({ user_id: A.id, kind: 'doodle', body: png })).error, 'A 낙서 장 추가')
+  ok(!!(await A.sb.from('gs_notes').insert({ user_id: A.id, kind: 'etc', body: '' })).error, '메모·낙서 말고 다른 종류는 거절')
+  ok((await B.sb.from('gs_notes').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 메모·낙서를 못 봄')
+
   console.log('백업')
   ok((await client().rpc('gs_admin_backup', { p_code: 'wrong' })).error?.message.includes('bad_admin'), '관리자 코드 없이 백업 불가')
   const bk = await adm('gs_admin_backup', {})
