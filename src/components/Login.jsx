@@ -41,21 +41,21 @@ export default function Login() {
     <form className="sheet" onSubmit={submit} style={{ maxWidth: 520 }}>
       <h2><span>{up ? '갓생홈피 만들기' : '갓생홈피 입장'}</span></h2>
       <p className="sub">{up
-        ? '친구한테 받은 입장코드를 넣고, 로그인할 아이디와 홈피에서 쓸 닉네임을 정해요.'
-        : '가입할 때 정한 아이디와 비밀번호로 들어와요.'}</p>
-      {up && <>
-        <label htmlFor="li-code">입장코드</label>
-        <input className="inp" id="li-code" name="code" autoComplete="off" required />
-      </>}
-      <label htmlFor="li-login">아이디</label>
-      <input className="inp" id="li-login" name="login" maxLength={16} autoComplete="username" autoCapitalize="none" spellCheck={false}
-        pattern="[A-Za-z][A-Za-z0-9]{2,15}" title="영문으로 시작하는 영문·숫자 3~16자" placeholder={up ? '영문·숫자 3~16자 (예: jini99)' : ''} required />
-      <label htmlFor="li-pw">비밀번호</label>
-      <input className="inp" id="li-pw" name="password" type="password" minLength={4} autoComplete={up ? 'new-password' : 'current-password'} required />
+        ? '홈피에서 쓸 닉네임과 로그인할 아이디·비밀번호를 정해요. 친구한테 받은 입장코드도 필요해요.'
+        : '아이디와 비밀번호로 들어와요.'}</p>
       {up && <>
         <label htmlFor="li-nick">닉네임</label>
         <input className="inp" id="li-nick" name="nick" maxLength={16} placeholder="홈피에 보이는 이름 (예: 새벽러너 지니)" required />
-        <p className="sub">닉네임은 나중에 홈피에서 언제든 바꿀 수 있어요. 아이디는 로그인용이라 바뀌지 않아요.</p>
+        <p className="sub">닉네임은 나중에 홈피에서 언제든 바꿀 수 있어요.</p>
+      </>}
+      <label htmlFor="li-login">아이디</label>
+      <input className="inp" id="li-login" name="login" maxLength={16} autoComplete="username" autoCapitalize="none" spellCheck={false}
+        pattern="[A-Za-z][A-Za-z0-9]{2,15}" title="영문으로 시작하는 영문·숫자 3~16자" placeholder={up ? '로그인할 때 쓰는 아이디, 영문·숫자 3~16자 (예: jini99)' : ''} required />
+      <label htmlFor="li-pw">비밀번호</label>
+      <input className="inp" id="li-pw" name="password" type="password" minLength={4} autoComplete={up ? 'new-password' : 'current-password'} placeholder={up ? '4자 이상' : ''} required />
+      {up && <>
+        <label htmlFor="li-code">입장코드</label>
+        <input className="inp" id="li-code" name="code" autoComplete="off" placeholder="친구한테 받은 코드" required />
         <AvaPicker value={emoji} onChange={setEmoji} />
       </>}
       {msg && <p className="sub" role="alert">{msg}</p>}
