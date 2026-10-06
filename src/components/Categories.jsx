@@ -170,10 +170,13 @@ function CatPage({ id }) {
         <div className="cat-modes">
           {linked.map(q => {
             const joined = q.members.some(m => m.userId === S.uid)
-            return [
-              <button key={q.id} className="mode-btn" onClick={() => goCat('q:' + q.id)}>🏆 <b>챌린지</b><small>{q.title}{joined ? ' · 참여 중' : ''}</small></button>,
-              joined && <button key={q.id + 'p'} className="mode-btn pri" onClick={() => goCat('plan:' + q.id)}>📖 <b>플랜 열기</b><small>{q.title} 이어서 하기</small></button>,
-            ]
+            return (
+              <div key={q.id} className="mode-btn mode-box" role="button" tabIndex={0} onClick={() => goCat('q:' + q.id)} onKeyDown={e => { if (e.key === 'Enter') goCat('q:' + q.id) }}>
+                <span>🏆 <b>챌린지</b></span>
+                <small>{q.title}{joined ? ' · 참여 중' : ''}</small>
+                {joined && <button className="btn pri sm" onClick={e => { e.stopPropagation(); goCat('plan:' + q.id) }}>📖 플랜 열기</button>}
+              </div>
+            )
           })}
           <button className="mode-btn" onClick={() => setHelper(true)}>📘 <b>개인공부 도우미</b><small>나만의 공부 계획</small></button>
         </div>

@@ -8,6 +8,7 @@ import Friends from './components/Friends'
 import Settings from './components/Settings'
 import Categories from './components/Categories'
 import ScheduleBubble from './components/ScheduleBubble'
+import AppChrome from './components/AppChrome'
 
 const TABS = [['today', '오늘'], ['cats', '활동'], ['hompy', '미니홈피'], ['friends', '친구']]
 // 'cats/<id>' 는 활동 페이지
@@ -33,6 +34,12 @@ export default function App() {
     r.dataset.mark = ui.markStyle || 'pen'
     if (ui.image) { st.setProperty('--bgimg', `url("${ui.image}")`); r.dataset.bgimg = '1' } else { st.removeProperty('--bgimg'); delete r.dataset.bgimg }
   }, [ui.bg, ui.mark, ui.pattern, ui.markStyle, ui.image])
+  // 커서: 관리자가 올린 커서 중 내가 고른 것
+  const cursorImg = (S.site?.cursors || []).find(c => c.id === ui.cursor)?.image
+  useEffect(() => {
+    const r = document.documentElement
+    if (cursorImg) { r.style.setProperty('--cursor', `url("${cursorImg}") 4 4, auto`); r.dataset.cursor = '1' } else { r.style.removeProperty('--cursor'); delete r.dataset.cursor }
+  }, [cursorImg])
 
   const go = k => {
     setTab(k)
@@ -71,6 +78,7 @@ export default function App() {
         <main>{body}</main>
       </div>
       {me && S.loaded && <ScheduleBubble />}
+      <AppChrome />
       <button className={'gear' + (tab === 'settings' ? ' on' : '')} aria-label="설정" title="설정"
         onClick={() => go(tab === 'settings' ? 'today' : 'settings')}>⚙️</button>
       {S.toast && <div className="toast" role="status">{S.toast}</div>}

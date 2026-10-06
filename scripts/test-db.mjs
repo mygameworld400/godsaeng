@@ -229,6 +229,24 @@ try {
   ok(!(await A.sb.from('gs_profiles').update({ diary_cover: { color: '#E5534B', shape: 'heart', title: '갓생' } }).eq('id', A.id)).error, 'A 다이어리 표지 공개 저장')
   ok((await B.sb.from('gs_profiles').select('diary_cover').eq('id', A.id).single()).data?.diary_cover?.title === '갓생', 'B 가 A 의 다이어리 표지를 봄')
 
+  console.log('사이트 설정·우체통')
+  ok(!!(await A.sb.from('gs_site').insert({ key: 'weble', value: {} })).error, '일반 사용자는 사이트 설정을 못 바꿈')
+  ok(!!(await client().rpc('gs_admin_site_set', { p_code: 'wrong', p_key: 'test_key', p_value: {} })).error, '관리자 코드 없이 사이트 설정 불가')
+  ok(!(await adm('gs_admin_site_set', { p_key: 'test_key', p_value: { a: 1 } })).error, '관리자가 사이트 설정 저장')
+  ok((await B.sb.from('gs_site').select('value').eq('key', 'test_key').single()).data?.value?.a === 1, '멤버가 사이트 설정을 읽음')
+  ok(!(await A.sb.from('gs_feedback').insert({ user_id: A.id, body: '익명 공개 피드백' + tag, anonymous: true, public: true })).error, 'A 익명 공개 피드백')
+  ok(!(await A.sb.from('gs_feedback').insert({ user_id: A.id, body: '비공개 피드백' + tag, anonymous: false, public: false })).error, 'A 비공개 피드백')
+  const fbB = (await B.sb.rpc('gs_feedback_list')).data || []
+  const anonRow = fbB.find(f => f.body === '익명 공개 피드백' + tag)
+  ok(!!anonRow && anonRow.author === null, 'B 에게 익명 글은 작성자 없이 보임')
+  ok(!fbB.some(f => f.body === '비공개 피드백' + tag), 'B 에게 비공개 글은 안 보임')
+  ok((await B.sb.from('gs_feedback').select('*')).data?.length === 0, '피드백 표를 직접 읽을 수 없음 (익명 보호)')
+  const fbAdmin = (await adm('gs_admin_feedback', {})).data || []
+  const anonAdm = fbAdmin.find(f => f.body === '익명 공개 피드백' + tag)
+  ok(anonAdm?.author === A.nick && fbAdmin.some(f => f.body === '비공개 피드백' + tag), '관리자는 모든 글과 작성자를 봄')
+  ok(!(await adm('gs_admin_feedback_update', { p_id: anonAdm?.id, p_status: 'done', p_reply: '반영했어요' })).error, '관리자 답장·처리 완료')
+  ok((await A.sb.rpc('gs_feedback_list')).data?.find(f => f.id === anonAdm?.id)?.reply === '반영했어요', 'A 가 답장을 봄')
+
   console.log('백업')
   ok((await client().rpc('gs_admin_backup', { p_code: 'wrong' })).error?.message.includes('bad_admin'), '관리자 코드 없이 백업 불가')
   const bk = await adm('gs_admin_backup', {})

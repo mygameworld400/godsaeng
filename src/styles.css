@@ -314,8 +314,13 @@ button.plan-sound{cursor:pointer}
 .modal-bg:has(.modal.bare){padding:0;background:rgba(15,20,35,.6)}
 .modal.bare .modal-x{position:fixed;top:14px;right:16px;margin:0}
 .diary-stage{min-height:calc(100vh - 32px);display:grid;place-items:center}
-.cover-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
-.cover-wrap .deco{background:var(--paper);width:min(520px,92vw)}
+.cover-wrap{display:flex;align-items:flex-start;justify-content:center}
+.cover-col{display:flex;flex-direction:column;align-items:center;gap:12px}
+/* 꾸미기 패널이 오른쪽에서 펼쳐지며 다이어리를 살짝 왼쪽으로 민다 */
+.deco-side{width:0;opacity:0;overflow:hidden;transition:width .45s ease,opacity .3s ease,margin .45s ease}
+.cover-wrap.deco-open .deco-side{width:min(380px,42vw);opacity:1;margin-left:28px;overflow:auto;max-height:86vh}
+@media (max-width:760px){.cover-wrap{flex-direction:column;align-items:center}.cover-wrap.deco-open .deco-side{width:92vw;margin:12px 0 0}}
+.cover-wrap .deco{background:var(--paper);width:100%;box-sizing:border-box}
 .spread{position:relative;display:grid;grid-template-columns:1fr 1fr;width:min(1240px,96vw);height:min(86vh,920px);
   border-radius:10px;padding:10px;background:var(--cover);box-shadow:0 10px 30px rgba(0,0,0,.35);perspective:2000px}
 .spread.one{grid-template-columns:1fr;width:min(560px,96vw)}
@@ -444,6 +449,42 @@ html[data-bgimg] body{background-image:var(--bgimg);background-size:cover;backgr
 .cover.mini .cover-title{font-size:13px}
 .cover.mini .cover-sub{font-size:10px}
 .cover.mini .cover-label{padding:4px}
+.mode-box{cursor:pointer}
+.mode-box .btn{margin-top:6px;font-size:14px}
+.weble{position:fixed;top:10px;left:14px;z-index:20;display:block;line-height:0;transition:transform .15s}
+.weble:hover{transform:scale(1.1)}
+.weble img{width:34px;height:34px;object-fit:contain}
+.weble span{font-size:26px;line-height:1}
+.mailbox{position:fixed;left:14px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:20;border:0;background:none;font-size:30px;line-height:1;cursor:pointer;padding:2px;transition:transform .15s}
+.mailbox:hover{transform:rotate(-8deg) scale(1.1)}
+.ver{position:fixed;right:10px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:20;border:0;background:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 4px}
+.ver:hover{color:var(--ink);text-decoration:underline}
+.bubble{bottom:calc(30px + env(safe-area-inset-bottom,0px))}
+@media (min-width:1460px){.bubble{bottom:auto}}
+.changelog{display:flex;flex-direction:column;gap:10px}
+.changelog ul{margin:2px 0 0;padding-left:18px;font-size:14px}
+.modal.update{width:min(360px,100%);text-align:center;align-items:center}
+.update-t{font-family:var(--f-display);font-size:24px;margin:0}
+.fb{border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:6px;background:var(--paper)}
+.fb.st-done{opacity:.75}
+.fb-reply{margin:0;background:var(--soft);border-radius:8px;padding:6px 10px;font-size:14px}
+html[data-cursor],html[data-cursor] *{cursor:var(--cursor)}
+html[data-cursor] :is(textarea,input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file])){cursor:text}
+.sticker-grid{display:flex;flex-wrap:wrap;gap:8px}
+.sticker-pick{position:relative;width:76px;height:76px;border:1.5px dashed var(--line);border-radius:10px;background:repeating-conic-gradient(var(--soft) 0 25%,var(--paper) 0 50%) 0 0/12px 12px;display:grid;place-items:center;padding:4px;cursor:pointer}
+.sticker-pick img{max-width:100%;max-height:100%}
+.sticker-pick.on{border-style:solid;border-color:var(--ink)}
+.sticker-pick:not(.on){opacity:.4}
+.sticker-pick .x,.sticker-pick .btn{position:absolute;top:-8px;right:-8px;padding:0 4px;background:var(--paper)}
+.cursor-opt img{width:18px;height:18px;vertical-align:middle;margin-right:3px}
+.stickers{position:absolute;inset:0;pointer-events:none}
+.stk{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;user-select:none;-webkit-user-drag:none;filter:drop-shadow(1px 2px 1px rgba(0,0,0,.25))}
+.cover.mini .stk{pointer-events:none}
+.deco-open .stk{cursor:grab}
+.stk.sel{outline:2px dashed #fff;outline-offset:2px}
+.sticker-corner{display:flex;flex-direction:column;gap:6px;border-top:1.5px dashed var(--line);padding-top:8px}
+.sticker-tray{display:flex;flex-wrap:wrap;gap:6px}
+.sticker-tray .sticker-pick{width:62px;height:62px}
 .recs{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mitem{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:grab;border-radius:12px;padding:4px 2px;border:1.5px dashed var(--line)}
 .mitem.dragging{opacity:.4}

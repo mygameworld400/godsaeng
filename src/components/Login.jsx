@@ -10,6 +10,7 @@ export const ERR = {
   bad_input: '닉네임은 16자까지, 비밀번호는 4자 이상이에요.',
   bad_admin: '관리자 코드가 맞지 않아요.',
   not_found: '이미 지워졌거나 없는 계정이에요.',
+  not_member: '가입한 사람만 쓸 수 있어요.',
   other_app: '다른 앱 계정이라 아이디·비밀번호는 바꿀 수 없어요. 닉네임만 바꿀 수 있어요.',
 }
 export const explain = err => {

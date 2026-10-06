@@ -11,5 +11,8 @@
     "react-hooks/rules-of-hooks": "error",
     "react/purity": "off",
     "react/set-state-in-effect": "off"
+  },
+  "globals": {
+    "__BUILD_ID__": "readonly"
   }
 }

@@ -58,7 +58,7 @@ export default function Hompy({ popup }) {
             {more[k] ? '접기 ▴' : `${items.length - SHOW}개 더 보기 ▾`}
           </button>
         )}
-      </> : <p className="empty">{mine ? `공개한 ${label}가 없어요. 오늘 탭에서 항목 옆의 비공개를 눌러 공개로 바꿀 수 있어요.` : `공개한 ${label}가 없어요.`}</p>}
+      </> : <p className="empty">{mine ? `${label}${label === '루틴' ? '이' : '가'} 없어요. 오늘 탭에서 항목 옆의 비공개를 눌러 공개로 바꾸면 여기에 보여요.` : `${label}${label === '루틴' ? '이' : '가'} 없어요.`}</p>}
     </section>
   )
   const cheer = e => { const v = formVals(e); if (v.text) { act.addCheer(v.text); e.currentTarget.reset() } }

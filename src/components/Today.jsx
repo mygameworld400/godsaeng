@@ -22,6 +22,8 @@ function ItemRow({ it, cats, editing, onEdit, onSave, onToggle, onPub, del, drag
       onDragOver={e => { e.preventDefault(); drag.hover(it.id) }} onDrop={e => { e.preventDefault(); drag.drop(it.id) }}>
       <span className="grip" aria-hidden="true" title="끌어서 순서 바꾸기">⋮⋮</span>
       <label><input type="checkbox" checked={it._done} onChange={e => onToggle(e.target.checked)} /><span className="t">{it.text}</span></label>
+      {it.carried && <span className="pill" title="완료하지 않아 다음 날로 넘어갔어요">다음 날로 →</span>}
+      {it.from && !it.done && <span className="pill" title="지난 날에 끝내지 못한 투두예요">이어서</span>}
       <PubToggle on={it.pub} onClick={onPub} />
       <button className="x" aria-label="수정" onClick={() => onEdit(it.id)}>✎</button>
       {del}

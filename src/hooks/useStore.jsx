@@ -9,6 +9,7 @@ import * as cheers from '../services/cheerService'
 import * as ledger from '../services/ledgerService'
 import * as books from '../services/bookService'
 import * as workouts from '../services/workoutService'
+import * as site from '../services/siteService'
 import * as categories from '../services/categoryService'
 import * as events from '../services/eventService'
 import * as quests from '../services/questService'
@@ -34,7 +35,7 @@ export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], notes: null, books: {}, workouts: {}, bubbleOpen: readBubble(),
+  me: null, people: {}, days: {}, diary: {}, fday: {}, baseCats: [], catDetails: {}, months: {}, events: {}, quests: [], notes: null, books: {}, workouts: {}, site: {}, bubbleOpen: readBubble(),
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -68,6 +69,7 @@ export function StoreProvider({ children }) {
       profiles.listProfiles(), profiles.myPrivate(uid), days.listMyDays(uid, since), days.listDiaries(uid, since),
       categories.listBaseCats(), quests.listQuests().catch(() => []),  // 챌린지 테이블(014) 전이면 빈 목록
     ])
+    S.site = await site.loadSite().catch(() => ({}))  // 사이트 설정(020) 전이면 빈 값
     S.people = p
     S.me = p[uid] ? { ...structuredClone(p[uid]), routines: priv?.routines ?? p[uid].routines } : null
     S.catDetails = priv?.catDetails || {}
@@ -75,6 +77,7 @@ export function StoreProvider({ children }) {
     S.ui = priv?.ui                  // 화면 설정 (018 전이면 undefined)
     S.days = d; S.diary = di; S.baseCats = base; S.months = {}; S.events = {}; S.quests = qs
     syncBaseCats()
+    carryTodos()
     await loadFriendDays()
     if (S.me && !S.view) await setView(uid)
     S.loaded = true; bump()
@@ -92,10 +95,29 @@ export function StoreProvider({ children }) {
     }
     if (changed) saveMe()
   }
+  /** 완료하지 않은 지난 투두를 오늘로 넘긴다. 원래 날의 항목은 carried 로 남겨 그날 달성률은 그대로. */
+  function carryTodos() {
+    if (!S.me) return
+    const t = today(), td = myDay(t)
+    let moved = false
+    for (const date of Object.keys(S.days)) {
+      if (date >= t) continue
+      const d = S.days[date]
+      for (const x of d.todos || []) {
+        if (x.done || x.carried) continue
+        if (!td.todos.some(y => y.from === x.id)) td.todos.push({ ...x, id: rid(), from: x.id, carried: false, done: false })
+        x.carried = true; moved = true
+        saveDay(date, true)
+      }
+    }
+    if (moved) saveDay(t)
+  }
   /** 다른 사람·관리자가 바꾼 것만 가볍게 다시 받는다 (내 기록은 수정 중일 수 있어 건드리지 않음). */
   async function softRefresh() {
     if (S.local || !S.uid || !S.loaded) return
-    const [p, base, qs] = await Promise.all([profiles.listProfiles(), categories.listBaseCats(), quests.listQuests().catch(() => null)])
+    const [p, base, qs, st] = await Promise.all([profiles.listProfiles(), categories.listBaseCats(), quests.listQuests().catch(() => null), site.loadSite().catch(() => null)])
+    if (st) S.site = st
+    carryTodos()  // 자정을 넘겨 창으로 돌아온 경우
     if (S.me && p[S.uid]) p[S.uid] = structuredClone(S.me)
     S.people = p; S.baseCats = base
     if (qs) {
@@ -142,8 +164,10 @@ export function StoreProvider({ children }) {
     later('me', () => profiles.saveProfile(S.uid, S.me, S.catDetails, S.diaryCover, S.ui))
   }
   const myDay = date => S.days[date] || (S.days[date] = normDay({}, date))
-  const saveDay = date => {
+  // keepRoutines: 지난 날을 고칠 때(투두 넘기기) 그날의 루틴 개수·달성은 그대로 둔다
+  const saveDay = (date, keepRoutines) => {
     const day = myDay(date), built = buildDay(S.me, day, S.diary[date]), priv = structuredClone(privDay(S.me, day))
+    if (keepRoutines && day.rTotal) { built.rTotal = day.rTotal; built.rDone = day.rDone }
     later('day:' + date, () => days.saveDay(S.uid, built, priv))
   }
 

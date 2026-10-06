@@ -5,9 +5,10 @@ import * as categories from '../services/categoryService'
 import * as plans from '../services/planService'
 import * as questApi from '../services/questService'
 import * as bookApi from '../services/bookService'
+import * as siteApi from '../services/siteService'
 import PlanViewer from './PlanViewer'
 import { COLORS, ConfirmX, Help, Modal, avaOf, formVals } from './common'
-import { makeIcon, makeBackground, makeCover } from '../lib/cutout'
+import { makeIcon, makeBackground, makeCover, makeCursor, splitStickers } from '../lib/cutout'
 import { explain } from './Login'
 import { localDateTime } from '../lib/date'
 
@@ -321,7 +322,13 @@ function Display() {
         {MARK_COLORS.map(c => <button key={c} className={'swatch big' + ((ui.mark || '') === c ? ' on' : '')} style={{ background: c }} aria-label={c} onClick={() => set({ mark: c })} />)}
         <input type="color" value={ui.mark || '#FFD84D'} onChange={e => set({ mark: e.target.value })} aria-label="다른 표시 색" />
       </div>
-      <div className="row"><ConfirmX onConfirm={() => set({ bg: '', pattern: '', image: '', mark: '', markStyle: '' })} label="기본으로 되돌리기" className="btn sm" /></div>
+      {(S.site?.cursors || []).length > 0 && (
+        <div className="set-row"><span className="sub">커서</span>
+          <button className={'btn sm' + (!ui.cursor ? ' hl' : '')} onClick={() => set({ cursor: '' })}>기본</button>
+          {S.site.cursors.map(c => <button key={c.id} className={'btn sm cursor-opt' + (ui.cursor === c.id ? ' hl' : '')} onClick={() => set({ cursor: c.id })} title={c.name}><img src={c.image} alt="" />{c.name}</button>)}
+        </div>
+      )}
+      <div className="row"><ConfirmX onConfirm={() => set({ bg: '', pattern: '', image: '', mark: '', markStyle: '', cursor: '' })} label="기본으로 되돌리기" className="btn sm" /></div>
     </section>
   )
 }
@@ -348,6 +355,73 @@ function BookRequests({ code, toast }) {
       )) : <p className="empty">표지를 기다리는 책이 없어요.</p>}
     </>
   )
+}
+
+/* 사이트 설정(관리자): 위블 계정·아이콘·링크 / 커서 / 스티커 */
+const WEBLE_LINK = 'https://docs.google.com/spreadsheets/d/1IuPozT0O302lXJMqeau_J3iKW2qK-fx5sBxQU8h1Wd8/edit?usp=sharing'
+const sid = () => Math.random().toString(36).slice(2, 9)
+
+function SiteAdmin({ code, accounts, toast, refresh }) {
+  const [site, setSite] = useState(null)
+  const [pieces, setPieces] = useState([])   // 스티커 시트에서 찾은 조각 [{ img, on }]
+  const [cut, setCut] = useState(true)
+  const load = () => siteApi.adminLoadSite(code).then(setSite).catch(e => { setSite({}); toast(explain(e)) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [code])
+  if (!site) return <p className="empty">불러오는 중…</p>
+  const weble = { users: [], icon: '', link: WEBLE_LINK, ...site.weble }
+  const cursors = site.cursors || [], stickers = site.stickers || []
+  const save = async (key, value, msg) => {
+    try { await siteApi.adminSetSite(code, key, value); setSite({ ...site, [key]: value }); refresh(); if (msg) toast(msg) } catch (e) { toast(explain(e)) }
+  }
+  const file = (fn) => e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) fn(f).catch(err => toast(err.message)) }
+
+  return <>
+    <h2><span>위블</span><Help>위블로 지정한 계정에게만 화면 왼쪽 위에 아이콘이 보이고, 누르면 링크로 이동해요.</Help></h2>
+    <div className="set-row"><span className="sub">아이콘</span>
+      <span className="checker sm">{weble.icon ? <img src={weble.icon} alt="" /> : '🔗'}</span>
+      <label className="btn sm">이미지 올리기<input type="file" accept="image/*" hidden onChange={file(async f => save('weble', { ...weble, icon: await makeIcon(f, { cutout: true }) }, '위블 아이콘을 바꿨어요.'))} /></label>
+      {weble.icon && <button className="x" onClick={() => save('weble', { ...weble, icon: '' })}>빼기</button>}
+    </div>
+    <div className="set-row"><span className="sub">링크</span>
+      <input className="inp" defaultValue={weble.link} key={weble.link} onBlur={e => e.target.value !== weble.link && save('weble', { ...weble, link: e.target.value.trim() }, '링크를 바꿨어요.')} aria-label="위블 링크" />
+    </div>
+    <div className="set-row"><span className="sub">위블 계정</span>
+      {(accounts || []).length ? accounts.map(a => {
+        const on = weble.users.includes(a.id)
+        return <button key={a.id} className={'btn sm' + (on ? ' hl' : '')} onClick={() => save('weble', { ...weble, users: on ? weble.users.filter(x => x !== a.id) : [...weble.users, a.id] })}>{on ? '✓ ' : ''}{a.nick}</button>
+      }) : <span className="sub">계정이 없어요.</span>}
+    </div>
+
+    <h2><span>커서</span><Help>올린 커서는 모두가 화면 설정에서 골라 쓸 수 있어요. 배경을 자동으로 지우고 40px 로 줄여요.</Help></h2>
+    <div className="set-row">
+      <label className="toggle"><input type="checkbox" checked={cut} onChange={e => setCut(e.target.checked)} /> 배경 자동 제거</label>
+      <label className="btn sm pri">커서 이미지 올리기<input type="file" accept="image/*" hidden onChange={file(async f => save('cursors', [...cursors, { id: sid(), name: f.name.replace(/\.[^.]+$/, '').slice(0, 12), image: await makeCursor(f, { cutout: cut }) }], '커서를 추가했어요.'))} /></label>
+    </div>
+    <div className="row">{cursors.map(c => (
+      <span key={c.id} className="chip"><img src={c.image} alt="" style={{ width: 24, height: 24 }} />{c.name}
+        <ConfirmX onConfirm={() => save('cursors', cursors.filter(x => x.id !== c.id))} /></span>
+    ))}</div>
+
+    <h2><span>스티커</span><Help>스티커 여러 개가 한 장에 있는 이미지를 올리면 배경을 지우고 하나씩 잘라 줘요. 쓸 것만 골라 추가하세요. 스티커끼리 떨어져 있을수록 잘 잘려요.</Help></h2>
+    <div className="set-row">
+      <label className="btn sm pri">스티커 시트 올리기<input type="file" accept="image/*" hidden onChange={file(async f => { const imgs = await splitStickers(f, { cutout: cut }); setPieces(imgs.map(img => ({ img, on: true }))); if (!imgs.length) toast('스티커를 찾지 못했어요. 배경이 단순한 이미지로 해 주세요.') })} /></label>
+      <span className="sub">배경 자동 제거는 위 커서 설정과 같이 써요.</span>
+    </div>
+    {pieces.length > 0 && <>
+      <p className="sub">{pieces.length}개를 찾았어요. 쓸 것만 남겨 주세요.</p>
+      <div className="sticker-grid">{pieces.map((p, i) => (
+        <button key={i} className={'sticker-pick' + (p.on ? ' on' : '')} onClick={() => setPieces(pieces.map((x, j) => j === i ? { ...x, on: !x.on } : x))}><img src={p.img} alt="" /></button>
+      ))}</div>
+      <div className="row">
+        <button className="btn pri sm" onClick={async () => { await save('stickers', [...stickers, ...pieces.filter(p => p.on).map(p => ({ id: sid(), image: p.img }))], '스티커를 추가했어요.'); setPieces([]) }}>골라진 {pieces.filter(p => p.on).length}개 추가</button>
+        <button className="btn sm" onClick={() => setPieces([])}>취소</button>
+      </div>
+    </>}
+    <div className="sticker-grid">{stickers.map(st => (
+      <span key={st.id} className="sticker-pick on"><img src={st.image} alt="" /><ConfirmX onConfirm={() => save('stickers', stickers.filter(x => x.id !== st.id))} /></span>
+    ))}</div>
+  </>
 }
 
 export default function Settings() {
@@ -403,6 +477,7 @@ export default function Settings() {
               <BaseCatForm code={code} toast={act.toast} onDone={() => { load(code); act.refresh() }} />
             </div>
             <Backup code={code} toast={act.toast} />
+            <SiteAdmin code={code} accounts={list} toast={act.toast} refresh={act.refresh} />
             <BookRequests code={code} toast={act.toast} />
             <AdminQuests code={code} baseCats={baseCats} toast={act.toast} refresh={act.refresh} />
             <PlanTest code={code} toast={act.toast} />

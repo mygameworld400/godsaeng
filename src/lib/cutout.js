@@ -118,3 +118,60 @@ export async function makeCover(file) {
   ctx.drawImage(img, 0, 0, c.width, c.height)
   return c.toDataURL('image/jpeg', 0.82)
 }
+
+/** 커서 이미지: (선택) 배경 제거 후 40px PNG. 브라우저 커서는 128px 이하만 받는다 */
+export async function makeCursor(file, { cutout = true, tolerance = 28 } = {}) {
+  const img = await loadImage(file)
+  const k = Math.min(1, 512 / Math.max(img.width, img.height))
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k))
+  const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, c.width, c.height)
+  if (cutout) removeBg(ctx, c.width, c.height, tolerance)
+  const sq = trimToSquare(c), out = document.createElement('canvas'); out.width = out.height = 40
+  const o = out.getContext('2d'); o.imageSmoothingQuality = 'high'; o.drawImage(sq, 0, 0, 40, 40)
+  return out.toDataURL('image/png')
+}
+
+/**
+ * 스티커 시트 나누기: 한 장에 여러 스티커가 있는 이미지 → 배경을 지우고 떨어진 그림 덩어리마다 하나씩 (PNG, 긴 쪽 ≤160px).
+ * 작은 틈(몇 px)은 이어진 것으로 본다(글자·점이 한 스티커에 붙어 있게). 너무 작은 조각은 버린다.
+ */
+export async function splitStickers(file, { tolerance = 28, cutout = true } = {}) {
+  const img = await loadImage(file)
+  const k = Math.min(1, 1600 / Math.max(img.width, img.height))
+  const W = Math.max(1, Math.round(img.width * k)), H = Math.max(1, Math.round(img.height * k))
+  const c = document.createElement('canvas'); c.width = W; c.height = H
+  const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, W, H)
+  if (cutout) removeBg(ctx, W, H, tolerance)
+  const d = ctx.getImageData(0, 0, W, H).data
+  // 4px 칸 격자로 줄여서(작은 틈 메우기) 덩어리를 찾는다
+  const B = 4, gw = Math.ceil(W / B), gh = Math.ceil(H / B), grid = new Uint8Array(gw * gh)
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 24) grid[((y / B) | 0) * gw + ((x / B) | 0)] = 1
+  const dil = new Uint8Array(gw * gh)  // 한 칸 넓히기
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) if (grid[y * gw + x])
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xx = x + dx; if (yy >= 0 && yy < gh && xx >= 0 && xx < gw) dil[yy * gw + xx] = 1 }
+  const seen = new Uint8Array(gw * gh), boxes = []
+  for (let i = 0; i < gw * gh; i++) {
+    if (!dil[i] || seen[i]) continue
+    let x0 = gw, y0 = gh, x1 = 0, y1 = 0, n = 0
+    const st = [i]; seen[i] = 1
+    while (st.length) {
+      const p = st.pop(), x = p % gw, y = (p - x) / gw
+      if (grid[p]) n++
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y
+      for (const q of [p - 1, p + 1, p - gw, p + gw]) {
+        if (q < 0 || q >= gw * gh || seen[q] || !dil[q]) continue
+        if ((q === p - 1 && x === 0) || (q === p + 1 && x === gw - 1)) continue
+        seen[q] = 1; st.push(q)
+      }
+    }
+    if (n >= Math.max(20, gw * gh * 0.0008)) boxes.push({ x: x0 * B, y: y0 * B, w: (x1 - x0 + 1) * B, h: (y1 - y0 + 1) * B })
+  }
+  boxes.sort((a, b) => (a.y - b.y) || (a.x - b.x))
+  return boxes.map(b => {
+    const s = Math.min(1, 160 / Math.max(b.w, b.h)), out = document.createElement('canvas')
+    out.width = Math.max(1, Math.round(b.w * s)); out.height = Math.max(1, Math.round(b.h * s))
+    const o = out.getContext('2d'); o.imageSmoothingQuality = 'high'
+    o.drawImage(c, b.x, b.y, b.w, b.h, 0, 0, out.width, out.height)
+    return out.toDataURL('image/png')
+  })
+}
