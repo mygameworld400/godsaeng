@@ -16,11 +16,21 @@ import * as events from '../services/eventService'
    서버 키가 없으면(로컬 dev) 미리보기 모드: 저장 없이 메모리에서만 동작한다. */
 
 const Ctx = createContext(null)
+const BUBBLE_KEY = 'godsaeng-bubble'
+function readBubble() { try { return localStorage.getItem(BUBBLE_KEY) !== 'closed' } catch { return true } }
+/** arr 에서 fromId 항목을 빼서 toId 항목 자리로 옮긴다 (드래그 순서 바꾸기) */
+function moveItem(arr, fromId, toId) {
+  const from = arr.findIndex(x => x.id === fromId), to = arr.findIndex(x => x.id === toId)
+  if (from < 0 || to < 0 || from === to) return false
+  const [it] = arr.splice(from, 1)
+  arr.splice(to, 0, it)
+  return true
+}
 export const useStore = () => useContext(Ctx)
 
 const initial = () => ({
   ready: false, local: !hasServer, session: null, uid: null, loaded: false,
-  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {},
+  me: null, people: {}, days: {}, diary: {}, fday: {}, ch: {}, baseCats: [], catDetails: {}, months: {}, events: {}, bubbleOpen: readBubble(),
   date: today(), view: null, vdays: {}, cheers: [], toast: '',
 })
 
@@ -169,6 +179,9 @@ export function StoreProvider({ children }) {
       saveMe(); bump()
       return id
     },
+    moveCat(fromId, toId) { if (moveItem(S.me.cats, fromId, toId)) { saveMe(); bump() } },
+    /** 순서를 한 칸 앞(-1)/뒤(+1)로 */
+    shiftCat(id, d) { const i = S.me.cats.findIndex(c => c.id === id), j = i + d; if (i >= 0 && j >= 0 && j < S.me.cats.length) act.moveCat(id, S.me.cats[j].id) },
     updateCat(id, patch) { const c = S.me.cats.find(x => x.id === id); if (c) { Object.assign(c, patch); saveMe(); bump() } },
     delCat(id) { S.me.cats = S.me.cats.filter(c => c.id !== id); delete S.catDetails[id]; saveMe(); bump() },
     catDetail: id => S.catDetails[id] || (S.catDetails[id] = { start: '', goal: '', todos: [] }),
@@ -179,11 +192,15 @@ export function StoreProvider({ children }) {
     delCatTodo(id, tid) { const d = act.catDetail(id); d.todos = d.todos.filter(x => x.id !== tid); saveMe(); bump() },
 
     addRoutine(text, cat) { S.me.routines.push({ id: rid(), text, cat, pub: false }); saveMe(); saveDay(today()); bump() },
+    editRoutine(id, patch) { const r = S.me.routines.find(x => x.id === id); if (r) { Object.assign(r, patch); saveMe(); saveDay(today()); bump() } },
+    moveRoutine(fromId, toId) { if (moveItem(S.me.routines, fromId, toId)) { saveMe(); bump() } },
     togglePubRoutine(id) { const r = S.me.routines.find(x => x.id === id); if (r) { r.pub = !r.pub; saveMe(); saveDay(today()); bump() } },
     delRoutine(id) { S.me.routines = S.me.routines.filter(r => r.id !== id); saveMe(); saveDay(today()); bump() },
 
     setDate(n) { S.date = n ? addDays(S.date, n) : today(); bump() },
     setDateTo(d) { S.date = d; bump() },
+    /** 일정 말풍선 펼치기/접기 (이 브라우저에 기억) */
+    setBubble(open) { S.bubbleOpen = open; try { localStorage.setItem(BUBBLE_KEY, open ? 'open' : 'closed') } catch { /* 무시 */ } bump() },
     /** 캘린더에서 보는 달('YYYY-MM')의 내 기록을 불러온다. 이미 있는 날(수정 중일 수 있음)은 덮지 않는다. */
     loadMonth(ym) {
       if (S.local || S.months[ym]) return
@@ -210,6 +227,8 @@ export function StoreProvider({ children }) {
     delEvent(id) { delete S.events[id]; bump(); now(() => events.removeEvent(id)) },
     toggleRoutine(id, on) { const d = myDay(S.date); if (on) d.checks[id] = true; else delete d.checks[id]; saveDay(S.date); bump() },
     addTodo(text, cat) { myDay(S.date).todos.push({ id: rid(), text, cat, done: false, pub: false }); saveDay(S.date); bump() },
+    editTodo(id, patch) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) { Object.assign(t, patch); saveDay(S.date); bump() } },
+    moveTodo(fromId, toId) { if (moveItem(myDay(S.date).todos, fromId, toId)) { saveDay(S.date); bump() } },
     togglePubTodo(id) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) { t.pub = !t.pub; saveDay(S.date); bump() } },
     toggleTodo(id, on) { const t = myDay(S.date).todos.find(x => x.id === id); if (t) t.done = on; saveDay(S.date); bump() },
     delTodo(id) { const d = myDay(S.date); d.todos = d.todos.filter(t => t.id !== id); saveDay(S.date); bump() },

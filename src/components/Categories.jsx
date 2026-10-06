@@ -3,8 +3,8 @@ import { useStore } from '../hooks/useStore'
 import { pretty } from '../lib/date'
 import { CAT_ICONS, COLORS, CatGlyph, CatIcon, ConfirmX, Help, catIcon, formVals, withImage } from './common'
 
-/* 활동 탭. 기본(관리자가 정해 둔 것, 골라서 추가)과 개별(직접 만든 것)은 개념상 구분일 뿐
-   화면에서는 한 목록으로 보여 준다.
+/* 활동 탭. 내 활동(담은 기본 + 직접 만든 개별)을 내가 정한 순서로 한 목록에 보여 준다.
+   기본 활동(관리자가 정한 것)은 '추천 활동' 버튼을 눌러야 보이고, 눌러서 담는다.
    아이콘을 누르면 그 활동 페이지(시작 날짜 · 목표 · 투두리스트)로 간다.
    지금은 모든 활동이 같은 기본 구성이다. */
 
@@ -21,11 +21,13 @@ function IconPicker({ value, onChange }) {
 function CatList() {
   const { S, act } = useStore()
   const [adding, setAdding] = useState(false)
+  const [recs, setRecs] = useState(false)      // 추천 활동 목록 펼침
+  const [manage, setManage] = useState(false)  // 관리 모드: 삭제·순서 바꾸기
   const [icon, setIcon] = useState(CAT_ICONS[0])
+  const [dragId, setDragId] = useState(null)
   const mine = S.me.cats
   // 예전 계정은 base 표시가 없으니 이름이 같으면 추가된 것으로 본다
   const addedOf = b => mine.find(c => c.base === b.id || (!c.base && c.name === b.name))
-  const custom = mine.filter(c => !S.baseCats.some(b => addedOf(b)?.id === c.id))
 
   const create = e => {
     const v = formVals(e)
@@ -36,26 +38,56 @@ function CatList() {
   }
 
   return (
-    <section className="sheet">
-      <h2><span>활동</span><Help>아이콘을 누르면 그 활동 페이지로 가요. 흐린 아이콘은 아직 추가하지 않은 활동이에요. 누르면 내 활동으로 추가돼요.</Help></h2>
-      <div className="icons">
-        {S.baseCats.map(b => {
-          const added = addedOf(b)
-          return added
-            ? <CatIcon key={b.id} cat={withImage(added, S.baseCats)} onClick={() => goCat(added.id)} />
-            : <CatIcon key={b.id} cat={b} dim badge="+" onClick={() => act.addBaseCat(b)} />
-        })}
-        {custom.map(c => <CatIcon key={c.id} cat={c} onClick={() => goCat(c.id)} />)}
-        <CatIcon cat={{ icon: '＋' }} label="새 활동" on={adding} onClick={() => setAdding(!adding)} />
-      </div>
-      {adding && (
-        <form className="addf col" onSubmit={create}>
-          <label>이름<input className="inp" name="name" maxLength={12} placeholder="예: 다이어트" autoFocus /></label>
-          <IconPicker value={icon} onChange={setIcon} />
-          <div className="row"><button className="btn pri">만들기</button><button type="button" className="btn" onClick={() => setAdding(false)}>취소</button></div>
-        </form>
-      )}
-    </section>
+    <div className="stack">
+      <section className="sheet">
+        <div className="row between">
+          <h2><span>내 활동</span>
+            <Help>아이콘을 누르면 그 활동 페이지로 가요. 추천 활동에서 골라 담거나 새 활동을 직접 만들 수 있어요. 관리를 누르면 활동을 지우거나 순서를 바꿀 수 있어요.</Help></h2>
+          <div className="row">
+            <button className={'btn sm' + (recs ? ' hl' : '')} onClick={() => setRecs(!recs)} aria-expanded={recs}>⭐ 추천 활동</button>
+            <Help>관리자가 준비한 활동이에요. 눌러서 내 활동에 담아요. ✓ 표시는 이미 담은 활동이에요.</Help>
+            <button className={'btn sm' + (manage ? ' hl' : '')} onClick={() => { setManage(!manage); setAdding(false) }}>{manage ? '완료' : '관리'}</button>
+            <Help>관리 모드에서 ✕ 로 활동을 지우고, 아이콘을 끌어서 놓거나 ◀ ▶ 로 순서를 바꿔요. 순서는 오늘 탭에도 똑같이 적용돼요.</Help>
+          </div>
+        </div>
+
+        {recs && (
+          <div className="recs">
+            <div className="icons">
+              {S.baseCats.length ? S.baseCats.map(b => {
+                const added = addedOf(b)
+                return <CatIcon key={b.id} cat={b} badge={added ? '✓' : '+'} dim={!!added}
+                  onClick={() => added ? goCat(added.id) : act.addBaseCat(b)} />
+              }) : <p className="empty">아직 준비된 추천 활동이 없어요.</p>}
+            </div>
+          </div>
+        )}
+
+        <div className="icons">
+          {mine.map((c, i) => manage ? (
+            <div key={c.id} className={'mitem' + (dragId === c.id ? ' dragging' : '')} draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragId(c.id) }} onDragEnd={() => setDragId(null)}
+              onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (dragId) act.moveCat(dragId, c.id); setDragId(null) }}>
+              <CatIcon cat={withImage(c, S.baseCats)} />
+              <div className="mbtns">
+                <button className="x" aria-label="앞으로" disabled={i === 0} onClick={() => act.shiftCat(c.id, -1)}>◀</button>
+                <ConfirmX onConfirm={() => act.delCat(c.id)} />
+                <button className="x" aria-label="뒤로" disabled={i === mine.length - 1} onClick={() => act.shiftCat(c.id, 1)}>▶</button>
+              </div>
+            </div>
+          ) : <CatIcon key={c.id} cat={withImage(c, S.baseCats)} onClick={() => goCat(c.id)} />)}
+          {!manage && <CatIcon cat={{ icon: '＋' }} label="새 활동" on={adding} onClick={() => setAdding(!adding)} />}
+          {!mine.length && manage && <p className="empty">담긴 활동이 없어요.</p>}
+        </div>
+        {adding && !manage && (
+          <form className="addf col" onSubmit={create}>
+            <label>이름<input className="inp" name="name" maxLength={12} placeholder="예: 다이어트" autoFocus /></label>
+            <IconPicker value={icon} onChange={setIcon} />
+            <div className="row"><button className="btn pri">만들기</button><button type="button" className="btn" onClick={() => setAdding(false)}>취소</button></div>
+          </form>
+        )}
+      </section>
+    </div>
   )
 }
 

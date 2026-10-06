@@ -8,6 +8,7 @@ import Friends from './components/Friends'
 import Bets from './components/Bets'
 import Settings from './components/Settings'
 import Categories from './components/Categories'
+import ScheduleBubble from './components/ScheduleBubble'
 
 const TABS = [['today', '오늘'], ['cats', '활동'], ['hompy', '미니홈피'], ['friends', '친구'], ['bets', '내기']]
 // 'cats/<id>' 는 활동 페이지
@@ -47,7 +48,7 @@ export default function App() {
 
   return (
     <>
-      <div className="wrap">
+      <div className={'wrap' + (me ? ' with-bubble' : '')}>
         <header className="top">
           <h1 className="brand"><span>갓생홈피</span></h1>
           <nav className="tabs" role="tablist" aria-label="메뉴">
@@ -62,6 +63,7 @@ export default function App() {
         {S.local && <div className="note">지금은 미리보기 상태라 기록이 저장되지 않아요. .env.local 에 Supabase 키를 넣으면 저장되고 친구와 공유돼요.</div>}
         <main>{body}</main>
       </div>
+      {me && S.loaded && <ScheduleBubble />}
       <button className={'gear' + (tab === 'settings' ? ' on' : '')} aria-label="설정" title="설정"
         onClick={() => go(tab === 'settings' ? 'today' : 'settings')}>⚙️</button>
       {S.toast && <div className="toast" role="status">{S.toast}</div>}
