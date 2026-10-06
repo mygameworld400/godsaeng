@@ -67,12 +67,17 @@ try {
   const back = (await A.sb.from('gs_day_private').select('*').eq('user_id', A.id).single()).data
   ok(back?.todos.length === 2 && back?.checks.r2, 'A 는 자기 비공개 항목까지 다시 불러옴')
 
+  const jpg = 'data:image/jpeg;base64,/9j/4AAQSkZJRg=='
+  ok(!(await A.sb.from('gs_profiles').update({ avatar: jpg }).eq('id', A.id)).error, 'A 프로필 사진 저장')
+  ok(!!(await A.sb.from('gs_profiles').update({ avatar: 'https://evil.example/x.png' }).eq('id', A.id)).error, '이미지 data URL 이 아닌 프로필 사진은 거절')
+
   console.log('친구가 보는 것')
   const seen = (await B.sb.from('gs_days').select('*').eq('user_id', A.id).eq('date', today)).data?.[0]
   ok(seen?.diary === '공개 일기', 'B 가 A 의 공개 일기를 봄')
   ok(seen?.r_done === 2 && seen?.r_total === 2 && seen?.t_done === 1 && seen?.t_total === 2, 'B 가 보는 달성 개수에는 비공개 항목도 포함 (루틴 2/2, 투두 1/2)')
   const profA = (await B.sb.from('gs_profiles').select('*').eq('id', A.id).single()).data
   const leak = JSON.stringify([seen, profA])
+  ok(profA?.avatar === jpg, 'B 가 A 의 프로필 사진을 봄')
   ok(leak.includes('공개루틴-스트레칭') && leak.includes('공개투두-과제'), 'B 에게 공개 항목 이름은 보임')
   ok(!leak.includes('비밀루틴') && !leak.includes('비밀투두') && !leak.includes('r2'), 'B 에게 비공개 항목 이름·id 는 전달 안 됨')
   ok((await B.sb.from('gs_private').select('*').eq('user_id', A.id)).data?.length === 0, 'B 는 A 의 전체 루틴 테이블을 못 봄')

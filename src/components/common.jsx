@@ -67,7 +67,11 @@ export function CatIcon({ cat, on, dim, badge, onClick, label }) {
 }
 
 export const nickOf = (S, id) => id === S.uid ? S.me?.nick || '나' : S.people[id]?.nick || '아직 가입 전인 친구'
-export const avaOf = (S, id) => (id === S.uid ? S.me?.emoji : S.people[id]?.emoji) || '🙂'
+/** 프로필 사진이 있으면 이미지, 없으면 얼굴 이모지 */
+export const avaOf = (S, id) => {
+  const p = id === S.uid ? S.me : S.people[id]
+  return p?.avatar ? <img className="ava-img" src={p.avatar} alt="" /> : (p?.emoji || '🙂')
+}
 
 /** 폼 제출 → 입력값 객체. 빈 값은 trim 된 '' */
 export const formVals = e => {

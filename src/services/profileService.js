@@ -3,6 +3,8 @@ import { supabase, unwrap } from '../lib/supabase'
 const toApp = r => ({
   id: r.id, handle: r.handle || '', nick: r.nick, emoji: r.emoji, bio: r.bio,
   cats: r.cats || [], routines: r.routines || [], rCount: r.r_count || 0, friends: r.friends || [],
+  // avatar 칸(011)이 있을 때만 키를 둔다 → 마이그레이션 전에도 저장이 깨지지 않게
+  ...(r.avatar !== undefined ? { avatar: r.avatar || '' } : {}),
 })
 
 /** RLS 상 gs_profiles 가 있는 사람만 전체 목록을 받는다. routines 는 공개 루틴만 들어 있다. */
@@ -22,6 +24,7 @@ export async function saveProfile(uid, p, catDetails = {}) {
   const now = new Date().toISOString()
   unwrap(await supabase.from('gs_profiles').upsert({
     id: uid, nick: p.nick, emoji: p.emoji, bio: p.bio || '', cats: p.cats, friends: p.friends,
+    ...('avatar' in p ? { avatar: p.avatar || null } : {}),
     routines: p.routines.filter(r => r.pub), r_count: p.routines.length, updated_at: now,
   }))
   unwrap(await supabase.from('gs_private').upsert({ user_id: uid, routines: p.routines, cat_details: catDetails, updated_at: now }))

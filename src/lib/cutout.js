@@ -87,3 +87,14 @@ export async function makeIcon(file, { cutout = true, tolerance = 28 } = {}) {
   if (cutout) removeBg(ctx, c.width, c.height, tolerance)
   return trimToSquare(c).toDataURL('image/png')
 }
+
+/** 프로필 사진: 가운데를 정사각으로 잘라 256px JPEG data URL (배경 제거 없음) */
+export async function makeAvatar(file) {
+  const img = await loadImage(file)
+  const side = Math.min(img.width, img.height)
+  const c = document.createElement('canvas'); c.width = c.height = SIZE
+  const ctx = c.getContext('2d')
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, SIZE, SIZE)
+  return c.toDataURL('image/jpeg', 0.85)
+}

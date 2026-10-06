@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore'
 import { today, pretty, localDate } from '../lib/date'
 import { stat, pc } from '../lib/stats'
 import { AvaPicker, ConfirmX, Help, Ring, avaOf, nickOf, formVals } from './common'
+import { makeAvatar } from '../lib/cutout'
 
 const SHOW = 4  // 목록은 4개까지 보이고 나머지는 펼쳐서 본다
 
@@ -11,6 +12,7 @@ export default function Hompy({ popup }) {
   const { S, act } = useStore()
   const [edit, setEdit] = useState(false)
   const [emoji, setEmoji] = useState(S.me.emoji)
+  const [avatar, setAvatar] = useState(S.me.avatar || '')  // 수정 중인 프로필 사진
   const [more, setMore] = useState({ r: false, t: false })
   const id = S.view || S.uid, mine = id === S.uid, p = mine ? S.me : S.people[id]
   const who = [S.uid, ...S.me.friends.filter(f => S.people[f])]
@@ -36,7 +38,7 @@ export default function Hompy({ popup }) {
   const saveProfile = e => {
     const v = formVals(e)
     if (!v.nick) return
-    act.saveProfile({ nick: v.nick, bio: v.bio, emoji })
+    act.saveProfile({ nick: v.nick, bio: v.bio, emoji, ...('avatar' in S.me ? { avatar } : {}) })
     setEdit(false)
   }
   // 렌더 함수로 쓴다 (컴포넌트로 만들면 매 렌더마다 새 타입이라 다시 마운트됨)
@@ -64,19 +66,21 @@ export default function Hompy({ popup }) {
       {!popup && switcher}
       <section className="sheet">
         <div className="hero">
-          <div className="ava">{p.emoji || '🙂'}</div>
+          <div className="ava">{avaOf(S, id)}</div>
           <div className="grow">
             <div className="row" style={{ gap: 10 }}>
+              {mine && <button className="pencil" aria-label={edit ? '프로필 수정 닫기' : '프로필 수정'} title="프로필 수정"
+                onClick={() => { setEdit(!edit); setEmoji(S.me.emoji); setAvatar(S.me.avatar || '') }}>✎</button>}
               <p className="nick">{p.nick}</p>
               <p className={'bio says' + (p.bio ? '' : ' none')}>{p.bio || (mine ? '한 줄 소개를 적어 보세요.' : '...')}</p>
               {d?.mood && <span className="pill">기분 {d.mood}</span>}
             </div>
-            <div className="row" style={{ marginTop: 4 }}>
-              {mine
-                ? <button className="btn sm" onClick={() => { setEdit(!edit); setEmoji(S.me.emoji) }}>{edit ? '닫기' : '프로필 수정'}</button>
-                : isFriend ? <span className="pill">내 친구</span>
+            {!mine && (
+              <div className="row" style={{ marginTop: 4 }}>
+                {isFriend ? <span className="pill">내 친구</span>
                   : <button className="btn sm pri" onClick={() => act.addFriend(id)}>친구 추가</button>}
-            </div>
+              </div>
+            )}
           </div>
           <div className="rings">
             <Ring pct={pc(st.rD, st.rT)} label={`루틴 ${st.rD}/${st.rT}`} size={88} />
@@ -89,6 +93,19 @@ export default function Hompy({ popup }) {
             <input className="inp" id="pf-nick" name="nick" maxLength={16} defaultValue={p.nick} required />
             <label htmlFor="pf-bio">한 줄 소개</label>
             <input className="inp" id="pf-bio" name="bio" maxLength={60} defaultValue={p.bio || ''} placeholder="예: 올해는 진짜 아침형 인간" />
+            {'avatar' in S.me && (
+              <div className="row">
+                <span className="ava">{avatar ? <img className="ava-img" src={avatar} alt="" /> : emoji}</span>
+                <label className="btn sm">사진 {avatar ? '바꾸기' : '올리기'}
+                  <input type="file" accept="image/*" hidden onChange={async e => {
+                    const f = e.target.files?.[0]; e.target.value = ''
+                    if (f) try { setAvatar(await makeAvatar(f)) } catch (err) { act.toast(err.message) }
+                  }} />
+                </label>
+                {avatar && <button type="button" className="x" onClick={() => setAvatar('')}>사진 빼기</button>}
+                <Help>사진은 가운데를 정사각형으로 잘라서 저장해요. 사진이 없으면 아래에서 고른 얼굴이 보여요.</Help>
+              </div>
+            )}
             <AvaPicker value={emoji} onChange={setEmoji} />
             <div className="row"><button className="btn pri">저장</button></div>
           </form>
