@@ -91,6 +91,7 @@ try {
   ok(!c.error, 'B 가 A 홈피에 방명록')
   const fake = await B.sb.from('gs_cheers').insert({ to_id: B.id, from_id: A.id, text: '사칭' })
   ok(!!fake.error, 'B 가 A 이름으로는 못 씀')
+  ok(!!(await A.sb.from('gs_cheers').insert({ to_id: A.id, from_id: A.id, text: '셀프' })).error, '내 홈피 방명록에는 내가 못 씀')
   ok(!(await A.sb.from('gs_cheers').delete().eq('id', c.data?.id)).error, 'A 가 자기 홈피 방명록 삭제')
 
   console.log('내기')

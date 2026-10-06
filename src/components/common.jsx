@@ -106,10 +106,10 @@ export function PubToggle({ on, onClick }) {
   return <button type="button" className="pubt" aria-pressed={!!on} onClick={onClick}>{on ? '공개' : '비공개'}</button>
 }
 
-export function Ring({ pct, label }) {
+export function Ring({ pct, label, size }) {
   const r = 52, c = 2 * Math.PI * r
   return (
-    <div className="ring">
+    <div className={'ring' + (size ? ' sm' : '')} style={size ? { width: size, height: size } : undefined}>
       <svg viewBox="0 0 128 128" aria-hidden="true">
         <circle cx="64" cy="64" r={r} fill="none" stroke="var(--line)" strokeWidth="12" />
         <circle cx="64" cy="64" r={r} fill="none" stroke="var(--hl)" strokeWidth="12" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} />

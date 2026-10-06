@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useStore } from '../hooks/useStore'
-import { WD, today, addDays, toD, pretty, localDate } from '../lib/date'
+import { today, pretty, localDate } from '../lib/date'
 import { stat, streak, pc } from '../lib/stats'
-import { AvaPicker, ConfirmX, Groups, Help, Ring, avaOf, nickOf, formVals } from './common'
+import { AvaPicker, ConfirmX, Help, Ring, avaOf, nickOf, formVals } from './common'
+
+const SHOW = 4  // 목록은 4개까지 보이고 나머지는 펼쳐서 본다
 
 export default function Hompy() {
   const { S, act } = useStore()
   const [edit, setEdit] = useState(false)
   const [emoji, setEmoji] = useState(S.me.emoji)
-  const [open, setOpen] = useState({ r: false, t: false })
+  const [more, setMore] = useState({ r: false, t: false })
   const id = S.view || S.uid, mine = id === S.uid, p = mine ? S.me : S.people[id]
   const who = [S.uid, ...S.me.friends.filter(f => S.people[f])]
 
@@ -24,8 +26,6 @@ export default function Hompy() {
   if (!p) return <div className="stack">{switcher}<div className="sheet"><p className="empty">이 친구의 미니홈피를 찾지 못했어요.</p></div></div>
 
   const days = mine ? S.days : S.vdays, t = today(), d = days[t], st = stat(p, d, mine), sk = streak(days, p, mine)
-  const week = []
-  for (let i = 6; i >= 0; i--) { const dt = addDays(t, -i); week.push({ dt, s: i === 0 ? st : stat(p, days[dt], false) }) }
   // 친구 것은 원래 공개 항목만 내려온다. 내 것도 미니홈피에서는 공개 항목만 보여 준다.
   const routines = (p.routines || []).filter(r => r.pub).map(r => ({ ...r, _done: !!d?.checks?.[r.id] }))
   const todos = (d?.todos || []).filter(x => x.pub).map(x => ({ ...x, _done: !!x.done }))
@@ -38,25 +38,22 @@ export default function Hompy() {
     act.saveProfile({ nick: v.nick, bio: v.bio, emoji })
     setEdit(false)
   }
-  const ro = i => (
-    <div key={i.id} className={'item ro' + (i._done ? ' done' : '')}>
-      <span className="mark">{i._done ? '✓' : ''}</span><span className="t">{i.text}</span>
-    </div>
-  )
   // 렌더 함수로 쓴다 (컴포넌트로 만들면 매 렌더마다 새 타입이라 다시 마운트됨)
-  const acc = ({ k, label, done, tot, items }) => (
+  const list = (k, label, items) => (
     <section className="sheet">
-      <button className="acc" aria-expanded={open[k]} onClick={() => setOpen({ ...open, [k]: !open[k] })}>
-        <span className="row between"><span className="sub">오늘 {label} 달성률</span><span className="pill"><b>{done}/{tot}</b> 완료</span></span>
-        <span className="big">{pc(done, tot)}%</span>
-        <span className="meter" aria-hidden="true"><i style={{ width: pc(done, tot) + '%' }} /></span>
-        <span className="more">{open[k] ? '접기 ▴' : '눌러서 자세히 보기 ▾'}</span>
-      </button>
-      {open[k] && <>
-        <p className="sub">공개로 설정한 {label}만 보여요. (공개 {items.length}개 / 전체 {tot}개)</p>
-        <Groups profile={p} items={items} row={ro}
-          empty={mine ? `공개한 ${label}가 없어요. 오늘 탭에서 항목 옆의 비공개를 눌러 공개로 바꿀 수 있어요.` : `공개한 ${label}가 없어요.`} />
-      </>}
+      <h2><span>오늘 {label}</span><Help>{`공개로 설정한 ${label}만 보여요.`}</Help></h2>
+      {items.length ? <>
+        {(more[k] ? items : items.slice(0, SHOW)).map(i => (
+          <div key={i.id} className={'item ro' + (i._done ? ' done' : '')}>
+            <span className="mark">{i._done ? '✓' : ''}</span><span className="t">{i.text}</span>
+          </div>
+        ))}
+        {items.length > SHOW && (
+          <button className="linkh more-btn" onClick={() => setMore({ ...more, [k]: !more[k] })}>
+            {more[k] ? '접기 ▴' : `${items.length - SHOW}개 더 보기 ▾`}
+          </button>
+        )}
+      </> : <p className="empty">{mine ? `공개한 ${label}가 없어요. 오늘 탭에서 항목 옆의 비공개를 눌러 공개로 바꿀 수 있어요.` : `공개한 ${label}가 없어요.`}</p>}
     </section>
   )
   const cheer = e => { const v = formVals(e); if (v.text) { act.addCheer(v.text); e.currentTarget.reset() } }
@@ -68,20 +65,23 @@ export default function Hompy() {
         <div className="hero">
           <div className="ava">{p.emoji || '🙂'}</div>
           <div className="grow">
-            <p className="nick">{p.nick}</p>
-            <p className="bio">{p.bio || (mine ? '한 줄 소개를 적어 보세요.' : '한 줄 소개가 아직 없어요.')}</p>
-            <div className="stats" style={{ marginTop: 8 }}>
+            <div className="row" style={{ gap: 8 }}>
+              <p className="nick">{p.nick}</p>
               <span className="pill">연속 <b>{sk}일</b></span>
               {d?.mood && <span className="pill">기분 {d.mood}</span>}
             </div>
+            <p className="bio">{p.bio || (mine ? '한 줄 소개를 적어 보세요.' : '한 줄 소개가 아직 없어요.')}</p>
+            <div className="row" style={{ marginTop: 4 }}>
+              {mine
+                ? <button className="btn sm" onClick={() => { setEdit(!edit); setEmoji(S.me.emoji) }}>{edit ? '닫기' : '프로필 수정'}</button>
+                : isFriend ? <span className="pill">내 친구</span>
+                  : <button className="btn sm pri" onClick={() => act.addFriend(id)}>친구 추가</button>}
+            </div>
           </div>
-          <Ring pct={st.pct} label="오늘 달성" />
-        </div>
-        <div className="row">
-          {mine
-            ? <button className="btn sm" onClick={() => { setEdit(!edit); setEmoji(S.me.emoji) }}>{edit ? '닫기' : '프로필 수정'}</button>
-            : isFriend ? <span className="pill">내 친구</span>
-              : <button className="btn sm pri" onClick={() => act.addFriend(id)}>친구 추가</button>}
+          <div className="rings">
+            <Ring pct={pc(st.rD, st.rT)} label={`루틴 ${st.rD}/${st.rT}`} size={88} />
+            <Ring pct={pc(st.tD, st.tT)} label={`투두 ${st.tD}/${st.tT}`} size={88} />
+          </div>
         </div>
         {mine && edit && (
           <form className="addf col" onSubmit={saveProfile}>
@@ -96,36 +96,25 @@ export default function Hompy() {
       </section>
 
       <div className="cols">
-        {acc({ k: 'r', label: '루틴', done: st.rD, tot: st.rT, items: routines })}
-        {acc({ k: 't', label: '투두', done: st.tD, tot: st.tT, items: todos })}
-      </div>
-
-      <div className="cols">
-        <section className="sheet">
-          <h2><span>최근 7일 달성률</span></h2>
-          <div className="week">
-            {week.map((w, i) => (
-              <div key={w.dt} className={'bar' + (w.s.pct ? '' : ' t0') + (i === 6 ? ' now' : '')} title={`${w.dt} ${w.s.pct}%`}>
-                <span>{w.s.pct}%</span><i style={{ height: Math.max(3, w.s.pct * 0.7) + '%' }} /><span>{WD[toD(w.dt).getDay()]}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+        {list('r', '루틴', routines)}
+        {list('t', '투두', todos)}
       </div>
 
       <section className="sheet">
-        <h2><span>공개 일기</span></h2>
+        <h2><span>다이어리</span><Help>오늘 탭 일기에서 '공개하기'를 체크한 날의 일기가 여기에 모여요.</Help></h2>
         {pubs.length ? pubs.map(x => (
           <div key={x.date}><p className="sub">{pretty(x.date)} {x.mood || ''}</p><p className="diary-ro">{x.diary}</p></div>
         )) : <p className="empty">{mine ? '오늘 탭의 일기에서 공개하기를 체크하면 여기에 보여요.' : '공개한 일기가 아직 없어요.'}</p>}
       </section>
 
       <section className="sheet">
-        <h2><span>방명록</span></h2>
-        <form className="addf" onSubmit={cheer}>
-          <input className="inp" name="text" maxLength={100} placeholder={mine ? '오늘의 나에게 한마디' : '응원이나 잔소리 한마디'} aria-label="방명록 글" />
-          <button className="btn pri">남기기</button>
-        </form>
+        <h2><span>방명록</span><Help>방명록은 친구만 남길 수 있어요. 내 홈피에 남겨진 글은 내가 지울 수 있어요.</Help></h2>
+        {!mine && (
+          <form className="addf" onSubmit={cheer}>
+            <input className="inp" name="text" maxLength={100} placeholder="응원이나 잔소리 한마디" aria-label="방명록 글" />
+            <button className="btn pri">남기기</button>
+          </form>
+        )}
         <div>
           {S.cheers.length ? S.cheers.map(c => (
             <div className="cheer" key={c.id}>
@@ -133,7 +122,7 @@ export default function Hompy() {
               <p><b>{nickOf(S, c.from)}</b> <small>{localDate(c.at)}</small><br />{c.text}</p>
               {(c.from === S.uid || mine) && <ConfirmX onConfirm={() => act.delCheer(c.id)} />}
             </div>
-          )) : <p className="empty">아직 방명록이 비어 있어요. 첫 글을 남겨 보세요.</p>}
+          )) : <p className="empty">{mine ? '아직 방명록이 비어 있어요. 친구들이 남긴 글이 여기에 보여요.' : '아직 방명록이 비어 있어요. 첫 글을 남겨 보세요.'}</p>}
         </div>
       </section>
     </div>

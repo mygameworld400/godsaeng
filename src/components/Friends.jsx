@@ -1,7 +1,7 @@
 import { useStore } from '../hooks/useStore'
 import { today, pretty } from '../lib/date'
 import { stat } from '../lib/stats'
-import { ConfirmX, Help, avaOf, nickOf } from './common'
+import { CatGlyph, ConfirmX, Help, avaOf, nickOf, withImage } from './common'
 
 export default function Friends() {
   const { S, act } = useStore()
@@ -58,6 +58,24 @@ export default function Friends() {
             </Person>
           )) : <p className="empty">아직 추가할 사람이 없어요.</p>}
         </div>
+      </section>
+
+      <section className="sheet span-all">
+        <h2><span>친구들의 활동</span><Help>친구들이 활동 탭에 담아 둔 활동이에요.</Help></h2>
+        {mineF.filter(id => S.people[id]).length ? mineF.filter(id => S.people[id]).map(id => {
+          const cats = S.people[id].cats || []
+          return (
+            <div className="person" key={id}>
+              <div className="ava s">{avaOf(S, id)}</div>
+              <div className="nm">{nickOf(S, id)}</div>
+              <div className="fcats">
+                {cats.length ? cats.map(c => (
+                  <span className="fcat" key={c.id} title={c.name}><CatGlyph cat={withImage(c, S.baseCats)} size={26} /><small>{c.name}</small></span>
+                )) : <small className="sub">아직 담은 활동이 없어요</small>}
+              </div>
+            </div>
+          )
+        }) : <p className="empty">친구를 추가하면 친구들이 하는 활동이 여기에 보여요.</p>}
       </section>
     </div>
   )
