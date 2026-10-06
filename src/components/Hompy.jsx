@@ -87,7 +87,7 @@ export default function Hompy() {
           <form className="addf col" onSubmit={saveProfile}>
             <label htmlFor="pf-nick">닉네임</label>
             <input className="inp" id="pf-nick" name="nick" maxLength={16} defaultValue={p.nick} required />
-            {p.handle && <p className="sub">로그인 아이디는 가입할 때 정한 「{p.handle}」 그대로예요. 여기서 바꾸는 건 화면에 보이는 이름이에요.</p>}
+            {p.handle && <p className="sub">로그인 아이디는 「{p.handle}」 그대로예요. 닉네임은 친구들에게 보이는 이름이라 언제든 바꿔도 돼요.</p>}
             <label htmlFor="pf-bio">한 줄 소개</label>
             <input className="inp" id="pf-bio" name="bio" maxLength={60} defaultValue={p.bio || ''} placeholder="예: 올해는 진짜 아침형 인간" />
             <AvaPicker value={emoji} onChange={setEmoji} />

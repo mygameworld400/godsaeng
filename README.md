@@ -1,4 +1,4 @@
-# 오늘도 해냄 (godsaeng)
+# 갓생홈피 (godsaeng)
 
 친구들과 같이 쓰는 갓생 다이어리. 데일리 루틴 · 투두 · 하루 일기 · 미니홈피 · 친구 순위 · 내기.
 
@@ -20,9 +20,15 @@
 메롱(`cc_`) · 미니홈(`mh_`) · 패션아카이브(`fa_`)와 **같은 프로젝트**를 공유한다.
 이 앱은 테이블·함수·정책 전부 **`gs_` 접두사**만 쓴다.
 
-1. SQL Editor 에서 `supabase/migrations/001_schema.sql` 실행
+1. SQL Editor 에서 `supabase/migrations/` 의 SQL 을 번호 순서대로 실행 + 입장코드·관리자 코드 insert (파일 주석 참고)
 2. `.env.local` 에 URL / publishable 키 (`.env.example` 참고)
 3. GitHub 저장소 Secrets 에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+**로그인은 영문 아이디 + 비밀번호.** 가입은 입장코드가 필요하고 `gs_register()` 가 확인된 계정을 직접 만든다
+(공용 프로젝트는 메일 인증 + 기본 SMTP 라 이메일 가입 불가). 닉네임은 아이디와 별개로 홈피에서 자유롭게 바꾼다.
+입장코드·관리자 코드는 `gs_secrets` 테이블에만 있고 저장소에는 없다.
+⚙️ 설정 → 관리자 모드에서 계정 목록 조회·아이디/닉네임/비밀번호 재설정·삭제 (`gs_admin_*` 함수).
+비밀번호는 bcrypt 해시라 원래 값은 관리자도 볼 수 없다.
 
 auth.users 가 다른 앱과 공유되므로 "로그인했다"만으로는 아무것도 못 본다.
 `gs_profiles` 에 행이 있는 사람(닉네임을 정한 사람)끼리만 서로의 기록을 본다.
@@ -35,6 +41,7 @@ auth.users 가 다른 앱과 공유되므로 "로그인했다"만으로는 아�
 npm install
 npm run dev      # 키가 없으면 저장 없는 미리보기 모드로 뜬다
 npm run check    # oxlint + build. 커밋 전에 돌린다
+npm run test:db  # 실제 DB 통합 테스트. .env.test.local 에 GS_ENTRY_CODE, GS_ADMIN_CODE
 ```
 
 main 에 푸시하면 GitHub Actions 가 Pages 로 배포한다.

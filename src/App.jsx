@@ -6,9 +6,10 @@ import Today from './components/Today'
 import Hompy from './components/Hompy'
 import Friends from './components/Friends'
 import Bets from './components/Bets'
+import Settings from './components/Settings'
 
 const TABS = [['today', '오늘'], ['hompy', '미니홈피'], ['friends', '친구'], ['bets', '내기']]
-const fromHash = () => { const h = location.hash.slice(1); return TABS.some(t => t[0] === h) ? h : 'today' }
+const fromHash = () => { const h = location.hash.slice(1); return h === 'settings' || TABS.some(t => t[0] === h) ? h : 'today' }
 
 export default function App() {
   const { S, act } = useStore()
@@ -33,6 +34,7 @@ export default function App() {
 
   let body
   if (!S.ready || (S.uid && !S.loaded)) body = <div className="sheet"><h2><span>다이어리를 펼치는 중</span></h2><p className="sub">잠시만요. 루틴과 투두, 친구 목록을 불러오고 있어요.</p></div>
+  else if (tab === 'settings') body = <Settings />
   else if (!S.uid) body = <Login />
   else if (!me) body = <Onboard />
   else if (tab === 'today') body = <Today />
@@ -44,17 +46,17 @@ export default function App() {
     <>
       <div className="wrap">
         <header className="top">
-          <h1 className="brand"><span>오늘도 해냄</span></h1>
-          {me && (
-            <nav className="tabs" role="tablist" aria-label="메뉴">
-              {TABS.map(([k, l]) => (
-                <button key={k} className="tab" role="tab" aria-selected={tab === k} onClick={() => go(k)}>
-                  {l}{((k === 'bets' && invites) || (k === 'friends' && added)) ? <span className="dot" aria-label="새 소식" /> : null}
-                </button>
-              ))}
-              {!S.local && <button className="tab" onClick={act.signOut}>로그아웃</button>}
-            </nav>
-          )}
+          <h1 className="brand"><span>갓생홈피</span></h1>
+          <nav className="tabs" role="tablist" aria-label="메뉴">
+            {me && TABS.map(([k, l]) => (
+              <button key={k} className="tab" role="tab" aria-selected={tab === k} onClick={() => go(k)}>
+                {l}{((k === 'bets' && invites) || (k === 'friends' && added)) ? <span className="dot" aria-label="새 소식" /> : null}
+              </button>
+            ))}
+            {S.uid && !S.local && <button className="tab" onClick={act.signOut}>로그아웃</button>}
+            <button className="tab" role="tab" aria-selected={tab === 'settings'} aria-label="설정"
+              onClick={() => go(tab === 'settings' ? 'today' : 'settings')}>⚙️ 설정</button>
+          </nav>
         </header>
         {S.local && <div className="note">지금은 미리보기 상태라 기록이 저장되지 않아요. .env.local 에 Supabase 키를 넣으면 저장되고 친구와 공유돼요.</div>}
         <main>{body}</main>

@@ -8,7 +8,7 @@ import { buildDay, privDay, normDay } from '../src/lib/stats.js'
 
 const readEnv = f => { try { return Object.fromEntries(readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.includes('=')).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()])) } catch { return {} } }
 const env = { ...readEnv('.env.local'), ...readEnv('.env.test.local') }
-if (!env.GS_ENTRY_CODE) { console.error('.env.test.local 에 GS_ENTRY_CODE=입장코드 를 넣어 주세요.'); process.exit(1) }
+if (!env.GS_ENTRY_CODE || !env.GS_ADMIN_CODE) { console.error('.env.test.local 에 GS_ENTRY_CODE=입장코드, GS_ADMIN_CODE=관리자코드 를 넣어 주세요.'); process.exit(1) }
 
 globalThis.crypto ??= webcrypto
 // src/services/authService.js 의 loginEmail 과 같은 식 (DB gs_login_email 과도 같아야 함)
@@ -21,29 +21,36 @@ const client = () => createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLI
 let fails = 0
 const ok = (cond, label) => { console.log((cond ? '  ✓ ' : '  ✗ ') + label); if (!cond) fails++ }
 const tag = Date.now().toString(36).slice(-5)
-const A = { h: '테스트A' + tag, pw: 'pw-' + tag + 'a', sb: client() }
-const B = { h: '테스트B' + tag, pw: 'pw-' + tag + 'b', sb: client() }
+const A = { h: 'gstesta' + tag, nick: '테스트A', pw: 'pw-' + tag + 'a', sb: client() }
+const B = { h: 'gstestb' + tag, nick: '테스트B', pw: 'pw-' + tag + 'b', sb: client() }
+const reg = (sb, code, login, pw, nick) => sb.rpc('gs_register', { p_code: code, p_login: login, p_password: pw, p_nick: nick, p_emoji: '🐣' })
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)
 
 try {
   console.log('가입')
-  const bad = await A.sb.rpc('gs_register', { p_code: 'wrong-code', p_handle: A.h, p_password: A.pw, p_emoji: '🐣' })
+  const bad = await reg(A.sb, 'wrong-code', A.h, A.pw, A.nick)
   ok(bad.error?.message.includes('bad_code'), '틀린 입장코드는 거절')
   for (const U of [A, B]) {
-    const r = await U.sb.rpc('gs_register', { p_code: env.GS_ENTRY_CODE, p_handle: U.h, p_password: U.pw, p_emoji: '🐣' })
+    const r = await reg(U.sb, env.GS_ENTRY_CODE, U.h, U.pw, U.nick)
     ok(!r.error, `${U.h} 가입 ${r.error?.message || ''}`)
     const s = await U.sb.auth.signInWithPassword({ email: await email(U.h), password: U.pw })
     ok(!!s.data.session, `${U.h} 로그인 ${s.error?.message || ''}`)
     U.id = s.data.user?.id
   }
-  const dup = await client().rpc('gs_register', { p_code: env.GS_ENTRY_CODE, p_handle: A.h.toLowerCase(), p_password: 'xxxx', p_emoji: '' })
-  ok(dup.error?.message.includes('taken'), '같은 닉네임 중복 가입 거절')
+  const dup = await reg(client(), env.GS_ENTRY_CODE, A.h.toUpperCase(), 'xxxx', '다른사람')
+  ok(dup.error?.message.includes('taken'), '같은 아이디(대소문자 무시) 중복 가입 거절')
+  const kor = await reg(client(), env.GS_ENTRY_CODE, '한글아이디', 'xxxx', '한글')
+  ok(kor.error?.message.includes('bad_id'), '영문이 아닌 아이디 거절')
+  const sameNick = await reg(client(), env.GS_ENTRY_CODE, 'gsnick' + tag, 'xxxx', A.nick)
+  ok(!sameNick.error, '닉네임은 겹쳐도 가입됨 (아이디와 별개)')
+  const extra = await client().auth.signInWithPassword({ email: await email('gsnick' + tag), password: 'xxxx' })
+  const extraId = extra.data.user?.id
   const wrongPw = await client().auth.signInWithPassword({ email: await email(A.h), password: 'nope' })
   ok(!!wrongPw.error, '틀린 비밀번호 로그인 거절')
 
   console.log('프로필 / 하루 기록')
   const pa = await A.sb.from('gs_profiles').select('*').eq('id', A.id).single()
-  ok(pa.data?.handle === A.h && pa.data?.cats.length === 3, '가입 시 프로필 + 기본 카테고리 3개 생성')
+  ok(pa.data?.handle === A.h && pa.data?.nick === A.nick && pa.data?.cats.length === 3, '가입 시 아이디·닉네임 따로 저장 + 기본 카테고리 3개')
   // 앱과 같은 방식으로 저장: 공개분은 buildDay, 전체는 privDay (src/hooks/useStore.jsx saveMe/saveDay)
   const me = { routines: [{ id: 'r1', text: '공개루틴-스트레칭', cat: '', pub: true }, { id: 'r2', text: '비밀루틴-약먹기', cat: '', pub: false }] }
   const day = normDay({ checks: { r1: true, r2: true }, todos: [
@@ -104,6 +111,25 @@ try {
   const delB = await B.sb.from('gs_challenges').delete().eq('id', betId).select()
   ok(!delB.data?.length, '만든 사람이 아니면 내기 삭제 불가')
   ok(!(await A.sb.from('gs_challenges').delete().eq('id', betId)).error, 'A 가 내기 삭제')
+
+  console.log('관리자')
+  const adm = (fn, args) => client().rpc(fn, { p_code: env.GS_ADMIN_CODE, ...args })
+  ok((await client().rpc('gs_admin_list', { p_code: 'wrong' })).error?.message.includes('bad_admin'), '틀린 관리자 코드 거절')
+  const list = await adm('gs_admin_list', {})
+  ok(!list.error && [A.id, B.id].every(id => list.data.some(a => a.id === id)), '관리자 계정 목록에 A·B 가 보임')
+  ok(list.data?.find(a => a.id === A.id)?.login === A.h, '목록에 아이디·닉네임 표시')
+  const newId = 'gsrenamed' + tag
+  ok(!(await adm('gs_admin_update', { p_id: B.id, p_login: newId, p_nick: '바뀐닉', p_password: 'newpass1' })).error, '관리자가 B 의 아이디·닉네임·비밀번호 변경')
+  ok(!!(await client().auth.signInWithPassword({ email: await email(B.h), password: B.pw })).error, 'B 예전 아이디로는 로그인 안 됨')
+  const relog = await B.sb.auth.signInWithPassword({ email: await email(newId), password: 'newpass1' })
+  ok(!!relog.data.session, 'B 새 아이디·새 비밀번호로 로그인')
+  ok((await adm('gs_admin_update', { p_id: B.id, p_login: A.h, p_nick: '', p_password: '' })).error?.message.includes('taken'), '이미 있는 아이디로는 변경 불가')
+  ok((await B.sb.from('gs_profiles').select('nick').eq('id', B.id).single()).data?.nick === '바뀐닉', '닉네임 변경 반영')
+  B.h = newId
+  if (extraId) {
+    ok(!(await adm('gs_admin_delete', { p_id: extraId })).error, '관리자가 계정 삭제')
+    ok(!(await adm('gs_admin_list', {})).data?.some(a => a.id === extraId), '삭제한 계정은 목록에서 사라짐')
+  }
 
   console.log('외부인')
   const anon = await client().from('gs_days').select('*')
