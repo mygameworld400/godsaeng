@@ -18,19 +18,19 @@ export function CategoryFilter({ cat, setCat }) {
   )
 }
 
-/** 상식 둘러보기: 카테고리 + 검색 + 라이브러리형 목록 */
+/** 지식 둘러보기: 카테고리 + 검색 + 라이브러리형 목록 */
 export default function KnowledgeBrowser({ items, onOpen, children }) {
   const [cat, setCat] = useState('')
   const [q, setQ] = useState('')
   const list = items.filter(k => matchKnowledge(k, q, cat))
   return (
     <div className="kn-page">
-      <h2 className="kn-h2">상식 둘러보기</h2>
+      <h2 className="kn-h2">지식 둘러보기</h2>
       <CategoryFilter cat={cat} setCat={setCat} />
-      <input className="inp kn-search" value={q} onChange={e => setQ(e.target.value)} placeholder="궁금한 상식을 검색하세요" aria-label="상식 검색" />
+      <input className="inp kn-search" value={q} onChange={e => setQ(e.target.value)} placeholder="궁금한 지식을 검색하세요" aria-label="지식 검색" />
       <p className="kn-muted">{list.length}개</p>
       <div className="kn-grid">{list.map(k => <KnowledgeCard key={k.id} k={k} onOpen={onOpen} />)}</div>
-      {!list.length && <p className="kn-empty">찾는 상식이 없어요. 다른 검색어로 찾아보세요.</p>}
+      {!list.length && <p className="kn-empty">찾는 지식이 없어요. 다른 검색어로 찾아보세요.</p>}
       {children}
     </div>
   )

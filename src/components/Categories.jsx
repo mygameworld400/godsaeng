@@ -154,7 +154,7 @@ function CatPage({ id }) {
   const isLedger = kind === 'ledger'
   const isBase = !!cat.base  // 기본 활동은 이름·아이콘을 관리자가 정한다 (빼기만 가능)
   const routines = S.me.routines.filter(r => r.cat === id)
-  // '상식' 페이지는 기본 구성(목표·투두) 없이 전용 전체 화면
+  // '지식' 페이지는 기본 구성(목표·투두) 없이 전용 전체 화면
   if (kind === 'knowledge') return <KnowledgeScreen back={() => goCat()} />
 
   const saveInfo = e => {

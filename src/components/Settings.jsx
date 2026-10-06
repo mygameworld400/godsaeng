@@ -143,7 +143,7 @@ function BaseCatForm({ c, code, onDone, toast }) {
             <option value="workout">페이지: 운동</option>
             <option value="media">페이지: 영화·드라마</option>
             <option value="miracle">페이지: 미라클모닝(챌린지만)</option>
-            <option value="knowledge">페이지: 상식</option>
+            <option value="knowledge">페이지: 지식</option>
           </select>
         </div>
         {file && (

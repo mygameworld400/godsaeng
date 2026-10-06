@@ -1,7 +1,6 @@
-/* 상식 콘텐츠 (mock). 나중에 DB/API 로 바꿀 때는 src/lib/knowledgeData.js 의 함수들만 교체하면 된다.
-   항목 형식:
-   { id, category, title, summary, body: [문단...], keyPoints: [...], tags: [...], minutes, image?, date? }
-   - date 를 넣으면 그날의 '오늘의 상식'으로 고정된다. 없으면 날짜에 따라 돌아가며 보여 준다. */
+/* 지식 카테고리 + 미리보기(서버 없음)용 예시 글.
+   실제 글은 DB(gs_knowledge)에 있고, 지식 페이지의 [관리] 버튼에서 관리자가 넣는다.
+   처음 DB 를 채울 때 이 예시들을 scripts/seed-knowledge.mjs 로 올렸다. */
 
 export const CATEGORIES = ['역사', '과학', '경제', '사회', '지리', '문화', 'IT', '생활']
 export const CATEGORY_ICON = { 역사: '📜', 과학: '🔬', 경제: '💹', 사회: '🏛️', 지리: '🗺️', 문화: '🎭', IT: '💻', 생활: '🏠' }

@@ -1,16 +1,14 @@
-import { KNOWLEDGE } from '../data/knowledge'
+/* 지식 글 목록에서 오늘 보여 줄 것 고르기 (글 자체는 services/knowledgeService 가 DB 에서 읽는다) */
 
-/* 상식 콘텐츠 읽기. 지금은 mock 배열(src/data/knowledge.js)에서 읽는다.
-   나중에 DB/API 를 붙일 때는 이 파일의 함수 세 개만 바꾸면 된다 (화면 쪽은 그대로). */
+/** 아직 날짜가 안 된 글은 숨긴다 (날짜 없는 글은 늘 보임) */
+export const visibleKnowledge = (list, date) => list.filter(k => !k.day || k.day <= date)
 
-export function listKnowledge() { return KNOWLEDGE }
-export function getKnowledge(id) { return KNOWLEDGE.find(k => k.id === id) || null }
-
-/** 오늘의 상식: date 가 그날로 지정된 항목, 없으면 날짜에 따라 돌아가며 하나 */
-export function todayKnowledge(date) {
-  const fixed = KNOWLEDGE.find(k => k.date === date)
+/** 오늘의 지식: 관리자가 그날로 넣은 글, 없으면 보이는 글 중 날짜에 따라 돌아가며 하나 */
+export function todayKnowledge(list, date) {
+  const fixed = list.find(k => k.day === date)
   if (fixed) return fixed
+  const pool = visibleKnowledge(list, date)
+  if (!pool.length) return null
   const [y, m, d] = date.split('-').map(Number)
-  const day = Math.floor(Date.UTC(y, m - 1, d) / 864e5)
-  return KNOWLEDGE[day % KNOWLEDGE.length]
+  return pool[Math.floor(Date.UTC(y, m - 1, d) / 864e5) % pool.length]
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { shortDate } from './parts'
 
-/* 내 상식 노트: 목록(검색·태그 필터) + 작성/수정 화면 */
+/* 내 지식 노트: 목록(검색·태그 필터) + 작성/수정 화면 */
 
 export function KnowledgeNoteList({ notes, onNew, onOpen }) {
   const [q, setQ] = useState('')
@@ -12,7 +12,7 @@ export function KnowledgeNoteList({ notes, onNew, onOpen }) {
   return (
     <div className="kn-page">
       <div className="kn-row">
-        <h2 className="kn-h2">내 상식 노트</h2>
+        <h2 className="kn-h2">내 지식 노트</h2>
         <button className="btn pri" onClick={onNew}>+ 새 노트</button>
       </div>
       <input className="inp kn-search" value={q} onChange={e => setQ(e.target.value)} placeholder="노트 검색" aria-label="노트 검색" />
@@ -28,7 +28,7 @@ export function KnowledgeNoteList({ notes, onNew, onOpen }) {
           <span className="kn-muted">{shortDate(n.updatedAt)} 수정</span>
         </button>
       ))}</div>
-      {!list.length && <p className="kn-empty">{notes.length ? '조건에 맞는 노트가 없어요.' : '아직 노트가 없어요. 상식을 읽고 "내 노트에 정리"를 눌러 보세요.'}</p>}
+      {!list.length && <p className="kn-empty">{notes.length ? '조건에 맞는 노트가 없어요.' : '아직 노트가 없어요. 지식을 읽고 "내 노트에 정리"를 눌러 보세요.'}</p>}
     </div>
   )
 }
@@ -44,7 +44,7 @@ export function KnowledgeNoteEditor({ note, related, onSave, onDelete, onCancel,
       <h2 className="kn-h2">{note.updatedAt ? '노트 수정' : '새 노트'}</h2>
       <label className="kn-label">제목<input className="inp" value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 남극과 사막에 대해" maxLength={80} /></label>
       {related && (
-        <div className="kn-related"><span className="kn-muted">관련 상식</span>
+        <div className="kn-related"><span className="kn-muted">관련 지식</span>
           <button className="kn-link" onClick={() => onOpenRelated(related.id)}>📎 {related.title}</button>
         </div>
       )}

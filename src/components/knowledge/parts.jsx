@@ -2,17 +2,29 @@ import { useState } from 'react'
 import { WD } from '../../lib/date'
 import { CATEGORY_ICON } from '../../data/knowledge'
 
-/* 상식 페이지의 작은 조각들: 사이드바, 카드, 출석 달력, 최근 본 상식 */
+/* 지식 페이지의 작은 조각들: 사이드바, 카드, 출석 달력, 최근 본 지식 */
 
-export const MENU = [['today', '오늘의 상식'], ['browse', '상식 둘러보기'], ['notes', '내 상식 노트'], ['saved', '저장한 상식'], ['attendance', '출석 기록']]
-export const dotDate = d => d.slice(0, 10).replace(/-/g, '.')
+export const MENU = [
+  ['읽기', [['today', '오늘의 지식'], ['browse', '지식 둘러보기'], ['quiz', '지식 퀴즈']]],
+  ['함께', [['share', '공유 지식'], ['news', '뉴스']]],
+  ['나의 기록', [['notes', '내 지식 노트'], ['saved', '저장한 지식'], ['attendance', '출석 기록']]],
+]
+const ACTIVE = { detail: 'browse', editor: 'notes' }
+/** 'YYYY-MM-DD' 또는 ISO 시각 → 'YYYY.MM.DD' (시각은 내 시간대 기준) */
+export const dotDate = d => {
+  if (d.length > 10) { const x = new Date(d); d = x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0') }
+  return d.replace(/-/g, '.')
+}
 export const shortDate = iso => { const d = new Date(iso); return `${d.getMonth() + 1}월 ${d.getDate()}일` }
 
 export function KnowledgeSidebar({ view, go }) {
   return (
-    <nav className="kn-side" aria-label="상식 메뉴">
-      {MENU.map(([k, l]) => (
-        <button key={k} className={'kn-nav' + (view === k || (view === 'detail' && k === 'browse') || (view === 'editor' && k === 'notes') ? ' on' : '')} onClick={() => go(k)}>{l}</button>
+    <nav className="kn-side" aria-label="지식 메뉴">
+      {MENU.map(([g, items]) => (
+        <div key={g} className="kn-navg">
+          <small className="kn-navh">{g}</small>
+          {items.map(([k, l]) => <button key={k} className={'kn-nav' + ((ACTIVE[view] || view) === k ? ' on' : '')} onClick={() => go(k)}>{l}</button>)}
+        </div>
       ))}
     </nav>
   )
@@ -66,7 +78,7 @@ export function RecentKnowledge({ ids, get, onOpen }) {
   if (!list.length) return null
   return (
     <section className="kn-block">
-      <h3 className="kn-h3">최근 본 상식</h3>
+      <h3 className="kn-h3">최근 본 지식</h3>
       <div className="kn-recent">{list.map(k => <button key={k.id} className="kn-link" onClick={() => onOpen(k.id)}><CategoryTag c={k.category} /> {k.title}</button>)}</div>
     </section>
   )
